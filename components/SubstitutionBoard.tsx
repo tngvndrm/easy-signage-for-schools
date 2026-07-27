@@ -61,9 +61,10 @@ function PauzeDivider({ label, now }: { label: string; now: boolean }) {
  */
 function NowPeriod({ label, progress }: { label: string; progress: number }) {
   return (
-    <span className="relative inline-flex min-w-[2.9rem] flex-col items-center overflow-hidden rounded-sm bg-accent px-[0.65rem] pb-[0.55rem] pt-[0.3rem] font-display text-[2.1rem] font-bold leading-none text-accent-contrast">
+    // Sized by the cell it sits in — it must not re-apply the row's em scale.
+    <span className="relative inline-flex min-w-[1.5em] flex-col items-center overflow-hidden rounded-sm bg-accent px-[0.3em] pb-[0.32em] pt-[0.14em] font-bold leading-none text-accent-contrast">
       {label}
-      <span className="absolute inset-x-[0.4rem] bottom-[0.22rem] h-[0.2rem] rounded-full bg-black/25">
+      <span className="absolute inset-x-[0.2em] bottom-[0.11em] h-[0.1em] rounded-full bg-black/25">
         <span
           className="block h-full rounded-full bg-white/90 transition-[width] duration-1000 ease-linear"
           style={{ width: `${Math.round(progress * 100)}%` }}
@@ -71,6 +72,19 @@ function NowPeriod({ label, progress }: { label: string; progress: number }) {
       </span>
     </span>
   );
+}
+
+/**
+ * How many substitution rows fit at full size. Beyond that the rows shrink
+ * together rather than colliding — a board nobody can read is worse than a
+ * board in smaller type, and busy days are the ones people most need to read.
+ */
+const COMFORTABLE_ROWS = 7;
+const MIN_SCALE = 0.55;
+
+function rowScale(rowCount: number): number {
+  if (rowCount <= COMFORTABLE_ROWS) return 1;
+  return Math.max(MIN_SCALE, COMFORTABLE_ROWS / rowCount);
 }
 
 export function SubstitutionBoard({
@@ -107,7 +121,11 @@ export function SubstitutionBoard({
           </p>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col px-[0.7rem]">
+        <div
+          className="flex min-h-0 flex-1 flex-col px-[0.7rem]"
+          // Row type is sized in em off this, so a busy day scales down as one.
+          style={{ fontSize: `${rowScale(substitutions.length)}rem` }}
+        >
           {groups.map((group, index) => {
             const showPauze =
               breakAfterPeriod !== null &&
@@ -145,7 +163,7 @@ export function SubstitutionBoard({
                       className="grid flex-1 items-center gap-x-[1rem] px-[1.1rem]"
                       style={{ gridTemplateColumns: COLUMNS }}
                     >
-                      <span className="font-display text-[2.1rem] font-bold leading-none text-accent">
+                      <span className="font-display text-[2.1em] font-bold leading-none text-accent">
                         {rowIndex !== 0 ? null : isNow && slot ? (
                           <NowPeriod
                             label={group.period}
@@ -155,22 +173,22 @@ export function SubstitutionBoard({
                           group.period
                         )}
                       </span>
-                      <span className="font-display text-[1.75rem] font-bold leading-none">
+                      <span className="font-display text-[1.75em] font-bold leading-none">
                         {row.klas}
                       </span>
-                      <span className="truncate text-[1.5rem] font-light leading-none text-muted">
+                      <span className="truncate text-[1.5em] font-light leading-none text-muted">
                         {row.absent}
                       </span>
-                      <span className="truncate text-[1.55rem] font-bold leading-none">
+                      <span className="truncate text-[1.55em] font-bold leading-none">
                         {row.substitute ? (
                           row.substitute
                         ) : (
-                          <span className="inline-block rounded-sm bg-alert-bg px-[0.7rem] py-[0.3rem] text-[1.2rem] font-bold text-alert">
+                          <span className="inline-block rounded-sm bg-alert-bg px-[0.45em] py-[0.2em] text-[0.78em] font-bold text-alert">
                             Geen les
                           </span>
                         )}
                       </span>
-                      <span className="text-right font-display text-[1.65rem] font-bold leading-none text-calm">
+                      <span className="text-right font-display text-[1.65em] font-bold leading-none text-calm">
                         {row.lokaal || "—"}
                       </span>
                     </div>

@@ -92,7 +92,9 @@ another moment and see how it will look without waiting for the day.
   dimension in `rem`, so 1080p and 4K render the identical layout, just scaled.
   Nothing to tune per screen.
 - **Rows share the vertical space.** More substitutions means shorter rows, not
-  a scrollbar — a kiosk has no one to scroll it.
+  a scrollbar — a kiosk has no one to scroll it. Type is sized for reading from
+  down the corridor; past about seven rows it scales down together so a busy day
+  still fits instead of colliding.
 - **Message loop** cross-fades every 12s (per-item `durationSec` overrides it).
 - **Resilience.** Each successful poll is cached in `localStorage`. If the
   network drops, the last good board stays on screen and a "Geen verbinding"

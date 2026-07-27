@@ -111,9 +111,13 @@
  * root font size is derived from the viewport height. A 1080p Pi screen and a
  * 4K panel then render the exact same layout, just scaled — no breakpoints,
  * no per-screen tuning.
+ *
+ * The divisor is the whole board's zoom: it's the number of rem that fit in the
+ * screen height, so lowering it makes everything bigger. Lower it further only
+ * as far as a busy substitution day still fits.
  */
 html {
-  font-size: clamp(10px, calc(100vh / 54), 44px);
+  font-size: clamp(10px, calc(100vh / 48), 52px);
 }
 
 body {
