@@ -62,8 +62,8 @@ in the dark corridor.
 ### The "now" marker
 
 The period currently being taught is filled with the accent in the **Lesuur**
-column, with a bar that drains as the lesson runs — so the board says both which
-row is live and how much of it is left. A block like "1 & 2" stays marked
+column, with a bar that fills as the lesson runs — so the board says both which
+row is live and how far into it we are. A block like "1 & 2" stays marked
 through both periods. During the middagpauze the divider itself lights up
 instead.
 

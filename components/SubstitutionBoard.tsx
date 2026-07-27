@@ -56,8 +56,8 @@ function PauzeDivider({ label, now }: { label: string; now: boolean }) {
 
 /**
  * The period number of the lesson happening right now: filled with the accent
- * and carrying a bar that drains as the lesson runs, so a glance at the board
- * tells you both which row is live and how much of it is left.
+ * and carrying a bar that fills as the lesson runs, so a glance at the board
+ * tells you both which row is live and how far into it we are.
  */
 function NowPeriod({ label, progress }: { label: string; progress: number }) {
   return (
@@ -66,7 +66,7 @@ function NowPeriod({ label, progress }: { label: string; progress: number }) {
       <span className="absolute inset-x-[0.4rem] bottom-[0.22rem] h-[0.2rem] rounded-full bg-black/25">
         <span
           className="block h-full rounded-full bg-white/90 transition-[width] duration-1000 ease-linear"
-          style={{ width: `${Math.round((1 - progress) * 100)}%` }}
+          style={{ width: `${Math.round(progress * 100)}%` }}
         />
       </span>
     </span>
