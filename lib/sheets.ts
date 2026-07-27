@@ -44,14 +44,27 @@ function mapColumns(header: string[]): ColumnMap {
   return found;
 }
 
-/** "1-2", "1 & 2", "1 en 2" -> { label: "1 & 2", start: 1 }. */
-function parsePeriod(raw: string): { label: string; start: number } | null {
+type ParsedPeriod = { label: string; start: number; all: number[] };
+
+/** "1-2", "1 & 2", "1 en 2" -> { label: "1 & 2", all: [1, 2] }. */
+function parsePeriod(raw: string): ParsedPeriod | null {
   const value = raw.trim();
   if (!value) return null;
   const numbers = value.match(/\d+/g);
   if (!numbers || numbers.length === 0) return null;
-  const label = numbers.length > 1 ? numbers.join(" & ") : numbers[0];
-  return { label, start: Number(numbers[0]) };
+
+  const all = numbers.map(Number);
+  // "1-2" means the block covers 1 through 2, not just its endpoints.
+  const spans = /[-–—]/.test(value) && all.length === 2;
+  const covered = spans
+    ? Array.from({ length: all[1] - all[0] + 1 }, (_, i) => all[0] + i)
+    : all;
+
+  return {
+    label: covered.length > 1 ? covered.join(" & ") : String(covered[0]),
+    start: covered[0],
+    all: covered,
+  };
 }
 
 /**
@@ -116,7 +129,7 @@ export async function readSubstitutions(today: string): Promise<Substitution[]> 
   }
 
   const out: Substitution[] = [];
-  let lastPeriod: { label: string; start: number } | null = null;
+  let lastPeriod: ParsedPeriod | null = null;
   let lastDate: string | null = null;
 
   for (const row of rows.slice(1)) {
@@ -125,7 +138,7 @@ export async function readSubstitutions(today: string): Promise<Substitution[]> 
     const date: string | null = normalizeDate(cell(columns.datum)) ?? lastDate;
     if (date) lastDate = date;
 
-    const period: { label: string; start: number } | null =
+    const period: ParsedPeriod | null =
       parsePeriod(cell(columns.period)) ?? lastPeriod;
     if (period) lastPeriod = period;
 
@@ -141,6 +154,7 @@ export async function readSubstitutions(today: string): Promise<Substitution[]> 
     out.push({
       period: period.label,
       periodStart: period.start,
+      periods: period.all,
       klas,
       absent,
       substitute: cell(columns.substitute),

@@ -1,4 +1,7 @@
+"use client";
+
 import type { Substitution } from "@/lib/types";
+import { useCurrentSlot } from "./useCurrentSlot";
 
 type Group = { period: string; periodStart: number; rows: Substitution[] };
 
@@ -36,13 +39,37 @@ function HeaderRow() {
   );
 }
 
-function PauzeDivider() {
+function PauzeDivider({ label, now }: { label: string; now: boolean }) {
+  const line = now ? "border-accent" : "border-line";
   return (
     <div className="flex shrink-0 items-center gap-[1rem] px-[1.8rem] py-[0.4rem]">
-      <span className="h-0 flex-1 border-t-[0.1rem] border-dashed border-line" />
-      <span className="eyebrow text-[0.8rem]">pauze</span>
-      <span className="h-0 flex-1 border-t-[0.1rem] border-dashed border-line" />
+      <span className={`h-0 flex-1 border-t-[0.1rem] border-dashed ${line}`} />
+      <span
+        className={`eyebrow text-[0.8rem] ${now ? "font-bold text-accent" : ""}`}
+      >
+        {label}
+      </span>
+      <span className={`h-0 flex-1 border-t-[0.1rem] border-dashed ${line}`} />
     </div>
+  );
+}
+
+/**
+ * The period number of the lesson happening right now: filled with the accent
+ * and carrying a bar that drains as the lesson runs, so a glance at the board
+ * tells you both which row is live and how much of it is left.
+ */
+function NowPeriod({ label, progress }: { label: string; progress: number }) {
+  return (
+    <span className="relative inline-flex min-w-[2.9rem] flex-col items-center overflow-hidden rounded-sm bg-accent px-[0.65rem] pb-[0.55rem] pt-[0.3rem] font-display text-[2.1rem] font-bold leading-none text-accent-contrast">
+      {label}
+      <span className="absolute inset-x-[0.4rem] bottom-[0.22rem] h-[0.2rem] rounded-full bg-black/25">
+        <span
+          className="block h-full rounded-full bg-white/90 transition-[width] duration-1000 ease-linear"
+          style={{ width: `${Math.round((1 - progress) * 100)}%` }}
+        />
+      </span>
+    </span>
   );
 }
 
@@ -54,6 +81,8 @@ export function SubstitutionBoard({
   breakAfterPeriod: number | null;
 }) {
   const groups = groupByPeriod(substitutions);
+  const slot = useCurrentSlot();
+  const livePeriod = slot?.kind === "lesson" ? slot.period : null;
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-[0.075rem] border-line bg-surface-1 py-[1.2rem]">
@@ -85,9 +114,25 @@ export function SubstitutionBoard({
               group.periodStart > breakAfterPeriod &&
               (groups[index - 1]?.periodStart ?? 0) <= breakAfterPeriod;
 
+            const isNow =
+              livePeriod !== null && group.rows[0].periods.includes(livePeriod);
+
             return (
               <div key={`${group.period}-${index}`} className="contents">
-                {showPauze && <PauzeDivider />}
+                {showPauze && (
+                  <PauzeDivider
+                    label={
+                      slot?.kind === "break" &&
+                      slot.afterPeriod === breakAfterPeriod
+                        ? slot.label
+                        : "pauze"
+                    }
+                    now={
+                      slot?.kind === "break" &&
+                      slot.afterPeriod === breakAfterPeriod
+                    }
+                  />
+                )}
                 <div
                   className={`flex min-h-0 flex-1 flex-col justify-center ${
                     index % 2 === 1 ? "rounded-md bg-surface-2" : ""
@@ -101,7 +146,14 @@ export function SubstitutionBoard({
                       style={{ gridTemplateColumns: COLUMNS }}
                     >
                       <span className="font-display text-[2.1rem] font-bold leading-none text-accent">
-                        {rowIndex === 0 ? group.period : ""}
+                        {rowIndex !== 0 ? null : isNow && slot ? (
+                          <NowPeriod
+                            label={group.period}
+                            progress={slot.progress}
+                          />
+                        ) : (
+                          group.period
+                        )}
                       </span>
                       <span className="font-display text-[1.75rem] font-bold leading-none">
                         {row.klas}

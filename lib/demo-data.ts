@@ -7,13 +7,13 @@ import type { Birthday, BoardMessage, Substitution, Takeover } from "./types";
  * unsubstituted lesson.
  */
 export const demoSubstitutions: Substitution[] = [
-  { period: "1 & 2", periodStart: 1, klas: "7A", absent: "Mevr. De Smet", substitute: "Dhr. Peeters", lokaal: "A12" },
-  { period: "3", periodStart: 3, klas: "8B", absent: "Dhr. Janssens", substitute: "Mevr. Claes", lokaal: "B04" },
-  { period: "4", periodStart: 4, klas: "9C", absent: "Mevr. Vermeulen", substitute: "", lokaal: "—" },
-  { period: "5", periodStart: 5, klas: "7B", absent: "Dhr. Maes", substitute: "Mevr. Willems", lokaal: "A08" },
-  { period: "6", periodStart: 6, klas: "9A", absent: "Mevr. De Smet", substitute: "Dhr. Peeters", lokaal: "C21" },
-  { period: "6", periodStart: 6, klas: "9C", absent: "Dhr. Janssens", substitute: "Mevr. Goossens", lokaal: "C22" },
-  { period: "7", periodStart: 7, klas: "8A", absent: "Mevr. Wouters", substitute: "Dhr. Verhoeven", lokaal: "B11" },
+  { period: "1 & 2", periodStart: 1, periods: [1, 2], klas: "7A", absent: "Mevr. De Smet", substitute: "Dhr. Peeters", lokaal: "A12" },
+  { period: "3", periodStart: 3, periods: [3], klas: "8B", absent: "Dhr. Janssens", substitute: "Mevr. Claes", lokaal: "B04" },
+  { period: "4", periodStart: 4, periods: [4], klas: "9C", absent: "Mevr. Vermeulen", substitute: "", lokaal: "—" },
+  { period: "5", periodStart: 5, periods: [5], klas: "7B", absent: "Dhr. Maes", substitute: "Mevr. Willems", lokaal: "A08" },
+  { period: "6", periodStart: 6, periods: [6], klas: "9A", absent: "Mevr. De Smet", substitute: "Dhr. Peeters", lokaal: "C21" },
+  { period: "6", periodStart: 6, periods: [6], klas: "9C", absent: "Dhr. Janssens", substitute: "Mevr. Goossens", lokaal: "C22" },
+  { period: "7", periodStart: 7, periods: [7], klas: "8A", absent: "Mevr. Wouters", substitute: "Dhr. Verhoeven", lokaal: "B11" },
 ];
 
 export const demoMessages: BoardMessage[] = [

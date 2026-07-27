@@ -59,6 +59,33 @@ Set them in the environment for the whole deployment, or override a single
 screen with `?theme=dark` / `?accent=blue` on its URL — handy for the one screen
 in the dark corridor.
 
+### The "now" marker
+
+The period currently being taught is filled with the accent in the **Lesuur**
+column, with a bar that drains as the lesson runs — so the board says both which
+row is live and how much of it is left. A block like "1 & 2" stays marked
+through both periods. During the middagpauze the divider itself lights up
+instead.
+
+The timetable lives in [`lib/schedule.ts`](lib/schedule.ts):
+
+| | | | |
+| --- | --- | --- | --- |
+| 1 | 08:50–09:40 | 5 | 13:20–14:10 |
+| 2 | 09:40–10:30 | 6 | 14:10–15:00 |
+| *kleine pauze* | 10:30–10:50 | *kleine pauze* | 15:00–15:10 |
+| 3 | 10:50–11:40 | 7 | 15:10–16:00 |
+| 4 | 11:40–12:30 | 8 | 16:00–16:50 |
+| *middagpauze* | 12:30–13:20 | | |
+
+Wednesday ends after period 4. Outside those windows — before the first bell,
+after the last, and all weekend — nothing is marked. The marker reads the Pi's
+own clock rather than the server's, so it stays right even if the board is
+showing cached data.
+
+Append `?now=11:20` (or `?now=wed+12:45`) to a screen URL to freeze it at
+another moment and see how it will look without waiting for the day.
+
 ### Display behaviour
 
 - **Resolution independent.** `html { font-size: calc(100vh / 54) }` and every

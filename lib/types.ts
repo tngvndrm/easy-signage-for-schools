@@ -5,6 +5,8 @@ export type Substitution = {
   period: string;
   /** Sort key: the first period number in the block. */
   periodStart: number;
+  /** Every period the block covers — `[1, 2]` for "1 & 2". */
+  periods: number[];
   klas: string;
   absent: string;
   /** Empty string means "no substitute" — rendered as a "geen les" chip. */
