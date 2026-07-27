@@ -5,17 +5,37 @@ import type { BoardMessage } from "@/lib/types";
 
 const DEFAULT_DURATION_SEC = 12;
 
-function Arrow({ direction }: { direction: "prev" | "next" }) {
+function SkipButton({
+  direction,
+  onClick,
+}: {
+  direction: "prev" | "next";
+  onClick: () => void;
+}) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="h-[1em] w-[1em]" aria-hidden>
-      <path
-        d={direction === "next" ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"}
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={
+        direction === "next" ? "Volgende mededeling" : "Vorige mededeling"
+      }
+      className="pointer-events-none flex h-[1.3rem] w-[1.3rem] items-center justify-center rounded-sm text-muted opacity-0 transition-opacity duration-200 hover:text-accent group-hover:pointer-events-auto group-hover:opacity-100"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        className="h-[0.9rem] w-[0.9rem]"
+        aria-hidden
+      >
+        <path
+          d={direction === "next" ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"}
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
   );
 }
 
@@ -64,11 +84,20 @@ export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
 
   return (
     <section className="group relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-[0.075rem] border-line bg-surface-1 p-[1.4rem]">
-      <div className="flex shrink-0 items-center justify-between pb-[0.6rem]">
+      {/* HEADER_ROW: fixed height so the birthday card's label lines up. */}
+      <div className="mb-[0.6rem] flex h-[1.7rem] shrink-0 items-center justify-between">
         <span className="eyebrow text-[0.8rem]">Mededelingen</span>
 
-        <div className="flex items-center gap-[0.7rem]">
-          {interactive && (
+        {interactive && (
+          /*
+           * Skip controls live up here rather than over the message, so they
+           * can never sit on top of the words. They reserve their space
+           * always and only fade in on hover — nothing in a corridor hovers,
+           * so the wall screens show dots and a counter exactly as before,
+           * and nothing shifts when a cursor arrives.
+           */
+          <div className="flex items-center gap-[0.5rem]">
+            <SkipButton direction="prev" onClick={() => go(safeIndex - 1)} />
             <div className="flex items-center gap-[0.35rem]">
               {messages.map((message, i) => (
                 <button
@@ -78,18 +107,19 @@ export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
                   aria-label={`Mededeling ${i + 1}`}
                   aria-current={i === safeIndex}
                   className={`h-[0.35rem] rounded-full transition-all duration-500 ${
-                    i === safeIndex ? "w-[1.7rem] bg-accent" : "w-[0.35rem] bg-line"
+                    i === safeIndex
+                      ? "w-[1.7rem] bg-accent"
+                      : "w-[0.35rem] bg-line"
                   }`}
                 />
               ))}
             </div>
-          )}
-          {interactive && (
-            <span className="eyebrow text-[0.75rem]">
+            <SkipButton direction="next" onClick={() => go(safeIndex + 1)} />
+            <span className="eyebrow pl-[0.2rem] text-[0.75rem]">
               {safeIndex + 1} van {count}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div
@@ -116,30 +146,6 @@ export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
         </div>
       </div>
 
-      {/*
-        Skip controls for a laptop visitor. They only appear on hover, so a
-        screen on the wall — which nothing ever hovers — stays uncluttered.
-      */}
-      {interactive && (
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-[0.4rem] pr-[0.7rem] text-[1.5rem] opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={() => go(safeIndex - 1)}
-            aria-label="Vorige mededeling"
-            className="flex h-[2em] w-[2em] items-center justify-center rounded-sm bg-surface-2 text-muted hover:text-accent"
-          >
-            <Arrow direction="prev" />
-          </button>
-          <button
-            type="button"
-            onClick={() => go(safeIndex + 1)}
-            aria-label="Volgende mededeling"
-            className="flex h-[2em] w-[2em] items-center justify-center rounded-sm bg-surface-2 text-muted hover:text-accent"
-          >
-            <Arrow direction="next" />
-          </button>
-        </div>
-      )}
     </section>
   );
 }

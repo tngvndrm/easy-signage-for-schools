@@ -1,3 +1,4 @@
+import { BirthdayGlyph } from "./BirthdayGlyph";
 import type { Birthday } from "@/lib/types";
 
 /**
@@ -9,25 +10,27 @@ export function BirthdayZone({ birthdays }: { birthdays: Birthday[] }) {
   if (birthdays.length === 0) return null;
 
   return (
-    <section className="relative flex w-[27%] shrink-0 flex-col justify-center gap-[0.4rem] overflow-hidden rounded-lg bg-[var(--brand-gold-700)] p-[1.4rem]">
+    // The transparent border matches the message card's, so both cards' content
+    // boxes start at the same y and their labels sit on one line.
+    <section className="relative flex w-[27%] shrink-0 flex-col overflow-hidden rounded-lg border-[0.075rem] border-transparent bg-[var(--brand-gold-700)] p-[1.4rem]">
       <span className="blob bg-gold" />
-      <div className="relative">
-        <span className="font-mono text-[0.8rem] uppercase tracking-[0.08em] text-white/75">
-          Jarig vandaag
-        </span>
-        <ul className="pt-[0.4rem]">
-          {birthdays.map((birthday) => (
-            <li key={birthday.id} className="leading-tight">
-              <span className="font-display text-[1.55rem] font-bold text-white">
-                {birthday.name}
-              </span>
-              <span className="pl-[0.5rem] text-[1.1rem] text-white/80">
-                {birthday.klas}
-              </span>
-            </li>
-          ))}
-        </ul>
+      {/* HEADER_ROW keeps this label on the same line as "Mededelingen". */}
+      <div className="relative mb-[0.6rem] flex h-[1.7rem] shrink-0 items-center gap-[0.5rem] font-mono text-[0.8rem] uppercase tracking-[0.08em] text-white/75">
+        Jarig vandaag
+        <BirthdayGlyph className="h-[1.7rem] w-[1.7rem] shrink-0 text-white" />
       </div>
+      <ul className="relative flex min-h-0 flex-1 flex-col justify-center">
+        {birthdays.map((birthday) => (
+          <li key={birthday.id} className="leading-tight">
+            <span className="font-display text-[1.55rem] font-bold text-white">
+              {birthday.name}
+            </span>
+            <span className="pl-[0.5rem] text-[1.1rem] text-white/80">
+              {birthday.klas}
+            </span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
