@@ -95,7 +95,14 @@ another moment and see how it will look without waiting for the day.
   a scrollbar — a kiosk has no one to scroll it. Type is sized for reading from
   down the corridor; past about seven rows it scales down together so a busy day
   still fits instead of colliding.
-- **Message loop** cross-fades every 12s (per-item `durationSec` overrides it).
+- **Message loop** cross-fades every 12s (per-item `durationSec` overrides it)
+  and shows its position as "2 van 3", so a passer-by knows whether they've seen
+  everything or should wait for one more.
+- **Readable at a desk too.** The same URL works on a laptop: click a dot to
+  jump, use the arrows that appear on hover, or press ← / →, and the dwell timer
+  restarts so nothing slides away mid-read. On a wall none of that shows —
+  hover controls need a mouse, and the cursor hides itself after three still
+  seconds. (On a touchscreen there's no hover, so the dots are the way to skip.)
 - **Resilience.** Each successful poll is cached in `localStorage`. If the
   network drops, the last good board stays on screen and a "Geen verbinding"
   badge appears after 5 minutes. If the *server* can't reach the Sheet it

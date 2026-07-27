@@ -129,10 +129,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Kiosk: no cursor, no accidental text selection from a stray touch. */
+/*
+ * Kiosk: no accidental text selection from a stray touch, and no cursor parked
+ * in the middle of the board. The pointer is hidden only while it sits still,
+ * so a Pi with no mouse never shows one, while a teacher visiting the page on a
+ * laptop gets their cursor back the moment they move it.
+ */
 .kiosk {
-  cursor: none;
   user-select: none;
+}
+
+.kiosk[data-idle="true"] {
+  cursor: none;
 }
 
 /* Small caps label used for column headers and zone titles. */

@@ -1,23 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { BoardMessage } from "@/lib/types";
 
 const DEFAULT_DURATION_SEC = 12;
 
+function Arrow({ direction }: { direction: "prev" | "next" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-[1em] w-[1em]" aria-hidden>
+      <path
+        d={direction === "next" ? "M9 5l7 7-7 7" : "M15 5l-7 7 7 7"}
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
   const [index, setIndex] = useState(0);
+  // Bumped on every interaction so the dwell timer restarts from full.
+  const [restart, setRestart] = useState(0);
 
   // Re-clamp when the admin removes an item while the loop is running.
-  const safeIndex = messages.length > 0 ? index % messages.length : 0;
+  const count = messages.length;
+  const safeIndex = count > 0 ? ((index % count) + count) % count : 0;
   const current = messages[safeIndex];
+  const interactive = count > 1;
+
+  const go = useCallback((next: number) => {
+    setIndex(next);
+    setRestart((r) => r + 1);
+  }, []);
 
   useEffect(() => {
-    if (messages.length < 2) return;
+    if (!interactive) return;
     const seconds = current?.durationSec ?? DEFAULT_DURATION_SEC;
     const timer = setTimeout(() => setIndex((i) => i + 1), seconds * 1000);
     return () => clearTimeout(timer);
-  }, [current, messages.length, safeIndex]);
+  }, [current, interactive, safeIndex, restart]);
+
+  // Arrow keys for anyone reading the board at their desk. The kiosk has no
+  // keyboard, so this costs it nothing.
+  useEffect(() => {
+    if (!interactive) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") go(safeIndex + 1);
+      if (event.key === "ArrowLeft") go(safeIndex - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [go, interactive, safeIndex]);
 
   if (!current) {
     return (
@@ -28,20 +63,32 @@ export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
   }
 
   return (
-    <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-[0.075rem] border-line bg-surface-1 p-[1.4rem]">
+    <section className="group relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-[0.075rem] border-line bg-surface-1 p-[1.4rem]">
       <div className="flex shrink-0 items-center justify-between pb-[0.6rem]">
         <span className="eyebrow text-[0.8rem]">Mededelingen</span>
-        <div className="flex items-center gap-[0.35rem]">
-          {messages.map((message, i) => (
-            <span
-              key={message.id}
-              className={`h-[0.35rem] transition-all duration-500 ${
-                i === safeIndex
-                  ? "w-[1.7rem] rounded-full bg-accent"
-                  : "w-[0.35rem] rounded-full bg-line"
-              }`}
-            />
-          ))}
+
+        <div className="flex items-center gap-[0.7rem]">
+          {interactive && (
+            <div className="flex items-center gap-[0.35rem]">
+              {messages.map((message, i) => (
+                <button
+                  key={message.id}
+                  type="button"
+                  onClick={() => go(i)}
+                  aria-label={`Mededeling ${i + 1}`}
+                  aria-current={i === safeIndex}
+                  className={`h-[0.35rem] rounded-full transition-all duration-500 ${
+                    i === safeIndex ? "w-[1.7rem] bg-accent" : "w-[0.35rem] bg-line"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+          {interactive && (
+            <span className="eyebrow text-[0.75rem]">
+              {safeIndex + 1} van {count}
+            </span>
+          )}
         </div>
       </div>
 
@@ -68,6 +115,31 @@ export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
           </p>
         </div>
       </div>
+
+      {/*
+        Skip controls for a laptop visitor. They only appear on hover, so a
+        screen on the wall — which nothing ever hovers — stays uncluttered.
+      */}
+      {interactive && (
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-[0.4rem] pr-[0.7rem] text-[1.5rem] opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={() => go(safeIndex - 1)}
+            aria-label="Vorige mededeling"
+            className="flex h-[2em] w-[2em] items-center justify-center rounded-sm bg-surface-2 text-muted hover:text-accent"
+          >
+            <Arrow direction="prev" />
+          </button>
+          <button
+            type="button"
+            onClick={() => go(safeIndex + 1)}
+            aria-label="Volgende mededeling"
+            className="flex h-[2em] w-[2em] items-center justify-center rounded-sm bg-surface-2 text-muted hover:text-accent"
+          >
+            <Arrow direction="next" />
+          </button>
+        </div>
+      )}
     </section>
   );
 }

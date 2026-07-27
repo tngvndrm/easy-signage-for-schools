@@ -7,6 +7,7 @@ import { Clock } from "./Clock";
 import { MessageLoop } from "./MessageLoop";
 import { SubstitutionBoard } from "./SubstitutionBoard";
 import { Takeover } from "./Takeover";
+import { useIdlePointer } from "./useIdlePointer";
 import type { BoardData } from "@/lib/types";
 
 const POLL_MS = 30_000;
@@ -43,6 +44,7 @@ export function BoardShell({
   const [data, setData] = useState<BoardData>(initial);
   const [stale, setStale] = useState(false);
   const lastOkRef = useRef<number>(Date.now());
+  const idle = useIdlePointer();
 
   const poll = useCallback(async () => {
     try {
@@ -88,14 +90,20 @@ export function BoardShell({
 
   if (data.takeover) {
     return (
-      <main className="kiosk h-screen w-screen overflow-hidden">
+      <main
+        className="kiosk h-screen w-screen overflow-hidden"
+        data-idle={idle}
+      >
         <Takeover takeover={data.takeover} />
       </main>
     );
   }
 
   return (
-    <main className="kiosk flex h-screen w-screen flex-col gap-[1rem] overflow-hidden p-[1.2rem]">
+    <main
+      className="kiosk flex h-screen w-screen flex-col gap-[1rem] overflow-hidden p-[1.2rem]"
+      data-idle={idle}
+    >
       <header className="flex h-[4.6rem] shrink-0 items-center justify-between rounded-lg border-[0.075rem] border-line bg-surface-1 px-[1.6rem]">
         <div className="flex items-center gap-[1rem]">
           <BrandMark className="h-[2.6rem] w-auto" />
