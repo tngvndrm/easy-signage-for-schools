@@ -25,6 +25,7 @@ what a single small container handles.
 - `/screen/1`, `/screen/2`, `/screen/3` — the board. Identical content per the
   spec; the screen number only shows in the status bar.
 - `/screen/1?takeover=1` — preview of full-screen takeover mode.
+- `/screen/1?keypanel=1` — preview of the classroom-key panel.
 - `/api/board` — the single JSON payload the board polls.
 - `/` — index with links to each screen.
 
@@ -44,9 +45,12 @@ The board is built on the **Steinerschool Gent brand & style guide**:
   system sans for body copy; monospace eyebrows for column labels. The font is
   self-hosted at build time (`next/font`), so a flaky line can't strip the
   school's typeface off the screen.
-- **Shape** — *"Afgerond, niet afgesneden."* No 90° corners anywhere: every
-  container uses the guide's irregular `--radius-sm/md/lg`, and the birthday and
-  takeover cards carry the off-kilter blob from the feature-card pattern.
+- **Shape** — *"Afgerond, niet afgesneden."* No 90° corners anywhere. The
+  guide's irregular hand-made radius is reserved for the large surfaces — the
+  header and the big panels — where it reads as deliberate; small chips and row
+  shading get a plain even radius, since repeating the asymmetry at that scale
+  turned into noise and fought the data. The birthday and takeover cards carry
+  the off-kilter blob from the feature-card pattern.
 
 Both are settings, not media queries — a kiosk has nobody to prefer anything:
 
@@ -97,14 +101,15 @@ with 22 classes most students need no reminder at all and only the stragglers do
 
 | Outstanding | What the board does |
 | --- | --- |
-| More than 6 | A full-screen slide every 3 minutes, for 20 seconds |
+| More than 6 | Takes the substitution board's area every 3 minutes, for 20 seconds |
 | 1 to 6 | A card in the messages rotation, counted in "3 van 4" |
 | 0 | Nothing |
 
-The slide is deliberately a short interruption rather than a standing takeover:
-the substitution board is what people come to the screen for, and the breaks are
-when they check it. A student passing at any point in the day still catches the
-reminder within a few minutes.
+Only the main region changes — the header, messages and birthday zones stay
+put, so the screen never stops looking like itself. It's deliberately a short
+interruption rather than a standing takeover: the substitution board is what
+people come to the screen for, and the breaks are when they check it. A student
+passing at any point in the day still catches the reminder within a few minutes.
 
 A duty appears once its date arrives and vanishes the moment the front desk
 ticks it off, so the board empties itself as they work through the list. Dates
@@ -127,7 +132,7 @@ counts as not done.
 
 To see either presentation without waiting for its cycle, append to a screen URL:
 
-- `?keyslide=1` — hold the full-screen slide on screen
+- `?keypanel=1` — hold the key panel in the board's main area
 - `?keys=3` — trim the list (demo mode only) so the messages-zone card shows
   instead
 
@@ -135,7 +140,7 @@ Both are also linked from the site index at `/`.
 
 ### Display behaviour
 
-- **Resolution independent.** `html { font-size: calc(100vh / 54) }` and every
+- **Resolution independent.** `html { font-size: calc(100vh / 48) }` and every
   dimension in `rem`, so 1080p and 4K render the identical layout, just scaled.
   Nothing to tune per screen.
 - **Rows share the vertical space.** More substitutions means shorter rows, not

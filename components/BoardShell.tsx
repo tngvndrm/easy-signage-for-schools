@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BirthdayZone } from "./BirthdayZone";
 import { BrandMark } from "./BrandMark";
 import { Clock } from "./Clock";
-import { KeySlide } from "./KeySlide";
-import { KEY_SLIDE_THRESHOLD } from "./keys-shared";
+import { KeyPanel } from "./KeyPanel";
+import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
 import { SubstitutionBoard } from "./SubstitutionBoard";
 import { Takeover } from "./Takeover";
@@ -14,14 +14,15 @@ import type { BoardData } from "@/lib/types";
 
 const POLL_MS = 30_000;
 /**
- * While a lot of keys are still outstanding the board interrupts itself with
- * the full list. Short and periodic rather than a standing takeover: the
- * substitution board is what people come to this screen for, and a student
- * walking past at any point in the day still catches the reminder within a few
+ * While a lot of keys are still outstanding, the key list periodically takes
+ * the substitution board's place — header, messages and birthday zones stay
+ * put, so the screen never stops looking like itself. Short and periodic
+ * rather than standing: the substitution board is what people come here for,
+ * and a student passing at any point still catches the reminder within a few
  * minutes. Once only a handful are left it drops to the messages zone instead.
  */
-const KEY_SLIDE_EVERY_MS = 3 * 60_000;
-const KEY_SLIDE_FOR_MS = 20_000;
+const KEY_PANEL_EVERY_MS = 3 * 60_000;
+const KEY_PANEL_FOR_MS = 20_000;
 /** After this long without a successful poll, tell the room the data is old. */
 const STALE_MS = 5 * 60_000;
 const CACHE_KEY = "infoborden:board";
@@ -46,31 +47,34 @@ function writeCache(data: BoardData) {
 export function BoardShell({
   initial,
   screenId,
-  forceKeySlide = false,
+  forceKeyPanel = false,
 }: {
   initial: BoardData;
   screenId: string;
-  /** Preview: hold the key slide on screen instead of cycling it. */
-  forceKeySlide?: boolean;
+  /** Preview: hold the key panel on screen instead of cycling it. */
+  forceKeyPanel?: boolean;
 }) {
   const [data, setData] = useState<BoardData>(initial);
   const [stale, setStale] = useState(false);
   const lastOkRef = useRef<number>(Date.now());
   const idle = useIdlePointer();
-  const [keySlideOn, setKeySlideOn] = useState(false);
+  const [keyPanelOn, setKeyPanelOn] = useState(false);
 
-  const manyKeys = data.keys.length > KEY_SLIDE_THRESHOLD;
+  const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
+  // Swaps into the substitution board's slot; everything else stays put.
+  const showKeys =
+    (keyPanelOn || forceKeyPanel) && data.keys.length > 0;
 
   useEffect(() => {
     if (!manyKeys) {
-      setKeySlideOn(false);
+      setKeyPanelOn(false);
       return;
     }
     let hide: ReturnType<typeof setTimeout>;
     const show = setInterval(() => {
-      setKeySlideOn(true);
-      hide = setTimeout(() => setKeySlideOn(false), KEY_SLIDE_FOR_MS);
-    }, KEY_SLIDE_EVERY_MS);
+      setKeyPanelOn(true);
+      hide = setTimeout(() => setKeyPanelOn(false), KEY_PANEL_FOR_MS);
+    }, KEY_PANEL_EVERY_MS);
     return () => {
       clearInterval(show);
       clearTimeout(hide);
@@ -122,7 +126,7 @@ export function BoardShell({
     };
   }, [poll]);
 
-  // An admin-authored takeover outranks the key slide: it was scheduled for
+  // An admin-authored takeover outranks the key panel: it was scheduled for
   // this exact day on purpose.
   if (data.takeover) {
     return (
@@ -131,17 +135,6 @@ export function BoardShell({
         data-idle={idle}
       >
         <Takeover takeover={data.takeover} />
-      </main>
-    );
-  }
-
-  if (keySlideOn || (forceKeySlide && data.keys.length > 0)) {
-    return (
-      <main
-        className="kiosk h-screen w-screen overflow-hidden"
-        data-idle={idle}
-      >
-        <KeySlide duties={data.keys} dateLabel={data.dateLabel} />
       </main>
     );
   }
@@ -177,16 +170,20 @@ export function BoardShell({
         </div>
       </header>
 
-      <SubstitutionBoard
-        substitutions={data.substitutions}
-        breakAfterPeriod={data.breakAfterPeriod}
-      />
+      {showKeys ? (
+        <KeyPanel duties={data.keys} />
+      ) : (
+        <SubstitutionBoard
+          substitutions={data.substitutions}
+          breakAfterPeriod={data.breakAfterPeriod}
+        />
+      )}
 
       <div className="flex h-[12rem] shrink-0 gap-[1rem]">
         <MessageLoop
           messages={data.messages}
           // Only once the list is short enough to read here; while it's long
-          // the full-screen slide carries it instead.
+          // the main-area panel carries it instead.
           keyDuties={manyKeys ? [] : data.keys}
         />
         <BirthdayZone birthdays={data.birthdays} />

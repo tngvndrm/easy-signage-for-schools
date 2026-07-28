@@ -1,11 +1,12 @@
 import type { KeyDuty } from "@/lib/types";
 
 /**
- * Above this many outstanding duties the board runs the full-screen slide;
- * at or below it, the list is short enough to sit in the messages rotation.
- * The board's insistence tracks how much is still outstanding.
+ * Above this many outstanding duties the key list periodically takes over the
+ * substitution board's area; at or below it, the list is short enough to sit in
+ * the messages rotation. The board's insistence tracks how much is still
+ * outstanding.
  */
-export const KEY_SLIDE_THRESHOLD = 6;
+export const KEY_PANEL_THRESHOLD = 6;
 
 export function KeyIcon({ className }: { className?: string }) {
   return (

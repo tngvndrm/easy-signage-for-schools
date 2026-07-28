@@ -35,8 +35,8 @@ export default async function ScreenPage({
       <BoardShell
         initial={data}
         screenId={id}
-        // ?keyslide=1 pins the key slide on, rather than waiting out its cycle.
-        forceKeySlide={query.keyslide === "1"}
+        // ?keypanel=1 pins the key panel on, rather than waiting out its cycle.
+        forceKeyPanel={query.keypanel === "1"}
       />
     </ThemeScope>
   );
