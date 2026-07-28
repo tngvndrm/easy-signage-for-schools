@@ -8,6 +8,9 @@ const PREVIEWS = [
   { href: "/screen/1?accent=blue", label: "Accent blauw" },
   { href: "/screen/1?accent=gold", label: "Accent goud" },
   { href: "/screen/1?takeover=1", label: "Takeover" },
+  { href: "/screen/1?keyslide=1", label: "Sleutels — volledig scherm" },
+  { href: "/screen/1?keys=3", label: "Sleutels — in mededelingen" },
+  { href: "/screen/1?now=11:20", label: "Lesuur 3 bezig" },
 ];
 
 export default function Home() {

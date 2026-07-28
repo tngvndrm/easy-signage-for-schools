@@ -32,7 +32,12 @@ export default async function ScreenPage({
 
   return (
     <ThemeScope theme={theme} accent={accent}>
-      <BoardShell initial={data} screenId={id} />
+      <BoardShell
+        initial={data}
+        screenId={id}
+        // ?keyslide=1 pins the key slide on, rather than waiting out its cycle.
+        forceKeySlide={query.keyslide === "1"}
+      />
     </ThemeScope>
   );
 }

@@ -125,8 +125,13 @@ special handling — the usual Friday-out/Monday-back can be prefilled with a
 formula. Any non-empty tick counts as done (`x`, `✓`, `ja`, a date); `nee`/`no`
 counts as not done.
 
-Append `?keys=3` to a screen URL to preview with a trimmed list (demo mode only)
-and see the zone version instead of the slide.
+To see either presentation without waiting for its cycle, append to a screen URL:
+
+- `?keyslide=1` — hold the full-screen slide on screen
+- `?keys=3` — trim the list (demo mode only) so the messages-zone card shows
+  instead
+
+Both are also linked from the site index at `/`.
 
 ### Display behaviour
 

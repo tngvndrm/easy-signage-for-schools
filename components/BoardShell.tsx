@@ -46,9 +46,12 @@ function writeCache(data: BoardData) {
 export function BoardShell({
   initial,
   screenId,
+  forceKeySlide = false,
 }: {
   initial: BoardData;
   screenId: string;
+  /** Preview: hold the key slide on screen instead of cycling it. */
+  forceKeySlide?: boolean;
 }) {
   const [data, setData] = useState<BoardData>(initial);
   const [stale, setStale] = useState(false);
@@ -132,7 +135,7 @@ export function BoardShell({
     );
   }
 
-  if (keySlideOn) {
+  if (keySlideOn || (forceKeySlide && data.keys.length > 0)) {
     return (
       <main
         className="kiosk h-screen w-screen overflow-hidden"
