@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { BoardMessage } from "@/lib/types";
+import type { BoardMessage, KeyDuty } from "@/lib/types";
+import { KeyChip, KeyIcon, keyHeadline } from "./keys-shared";
 
 const DEFAULT_DURATION_SEC = 12;
 
@@ -39,15 +40,37 @@ function SkipButton({
   );
 }
 
-export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
+type Slide =
+  | { kind: "message"; id: string; message: BoardMessage }
+  | { kind: "keys"; id: string };
+
+export function MessageLoop({
+  messages,
+  keyDuties = [],
+}: {
+  messages: BoardMessage[];
+  /** Only passed once the list is short enough for this zone; see BoardShell. */
+  keyDuties?: KeyDuty[];
+}) {
   const [index, setIndex] = useState(0);
   // Bumped on every interaction so the dwell timer restarts from full.
   const [restart, setRestart] = useState(0);
 
+  // The key reminder is just another card in the rotation, so it inherits the
+  // dwell timer, the dots and the "2 van 4" counter for free.
+  const slides: Slide[] = [
+    ...messages.map(
+      (message): Slide => ({ kind: "message", id: message.id, message }),
+    ),
+    ...(keyDuties.length > 0
+      ? [{ kind: "keys", id: "keys" } satisfies Slide]
+      : []),
+  ];
+
   // Re-clamp when the admin removes an item while the loop is running.
-  const count = messages.length;
+  const count = slides.length;
   const safeIndex = count > 0 ? ((index % count) + count) % count : 0;
-  const current = messages[safeIndex];
+  const current = slides[safeIndex];
   const interactive = count > 1;
 
   const go = useCallback((next: number) => {
@@ -57,7 +80,9 @@ export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
 
   useEffect(() => {
     if (!interactive) return;
-    const seconds = current?.durationSec ?? DEFAULT_DURATION_SEC;
+    const seconds =
+      (current?.kind === "message" ? current.message.durationSec : undefined) ??
+      DEFAULT_DURATION_SEC;
     const timer = setTimeout(() => setIndex((i) => i + 1), seconds * 1000);
     return () => clearTimeout(timer);
   }, [current, interactive, safeIndex, restart]);
@@ -99,9 +124,9 @@ export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
           <div className="flex items-center gap-[0.5rem]">
             <SkipButton direction="prev" onClick={() => go(safeIndex - 1)} />
             <div className="flex items-center gap-[0.35rem]">
-              {messages.map((message, i) => (
+              {slides.map((slide, i) => (
                 <button
-                  key={message.id}
+                  key={slide.id}
                   type="button"
                   onClick={() => go(i)}
                   aria-label={`Mededeling ${i + 1}`}
@@ -126,26 +151,41 @@ export function MessageLoop({ messages }: { messages: BoardMessage[] }) {
         key={current.id}
         className="animate-fade-up flex min-h-0 flex-1 items-center gap-[1.2rem]"
       >
-        {current.imageUrl && (
-          // Plain <img>: the banner comes from Cloud Storage and the kiosk needs
-          // no optimisation pipeline for a single image on screen.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={current.imageUrl}
-            alt=""
-            className="h-full w-auto max-w-[38%] rounded-md object-cover"
-          />
+        {current.kind === "keys" ? (
+          <div className="flex min-w-0 flex-1 flex-col gap-[0.5rem]">
+            <h3 className="flex items-center gap-[0.5rem] font-display text-[1.55rem] font-bold leading-tight text-accent">
+              <KeyIcon className="h-[1.5rem] w-[1.5rem] shrink-0" />
+              {keyHeadline(keyDuties)}
+            </h3>
+            <div className="flex flex-wrap gap-[0.5rem]">
+              {keyDuties.map((duty) => (
+                <KeyChip key={duty.id} duty={duty} compact />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            {current.message.imageUrl && (
+              // Plain <img>: the banner comes from Cloud Storage and the kiosk
+              // needs no optimisation pipeline for one image on screen.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={current.message.imageUrl}
+                alt=""
+                className="h-full w-auto max-w-[38%] rounded-md object-cover"
+              />
+            )}
+            <div className="min-w-0">
+              <h3 className="font-display text-[1.7rem] font-bold leading-tight text-accent">
+                {current.message.title}
+              </h3>
+              <p className="pt-[0.3rem] text-[1.4rem] leading-[1.3]">
+                {current.message.body}
+              </p>
+            </div>
+          </>
         )}
-        <div className="min-w-0">
-          <h3 className="font-display text-[1.7rem] font-bold leading-tight text-accent">
-            {current.title}
-          </h3>
-          <p className="pt-[0.3rem] text-[1.4rem] leading-[1.3]">
-            {current.body}
-          </p>
-        </div>
       </div>
-
     </section>
   );
 }

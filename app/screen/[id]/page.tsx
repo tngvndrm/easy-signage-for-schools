@@ -21,15 +21,18 @@ export default async function ScreenPage({
   const query = await searchParams;
   const previewTakeover = query.takeover === "1";
   const { theme, accent } = resolveTheme(query);
-  const data = await getBoardData({ previewTakeover });
+
+  const keysParam = Array.isArray(query.keys) ? query.keys[0] : query.keys;
+  const keyLimit = keysParam !== undefined ? Number(keysParam) : undefined;
+
+  const data = await getBoardData({
+    previewTakeover,
+    keyLimit: Number.isFinite(keyLimit) ? keyLimit : undefined,
+  });
 
   return (
     <ThemeScope theme={theme} accent={accent}>
-      <BoardShell
-        initial={data}
-        screenId={id}
-        previewTakeover={previewTakeover}
-      />
+      <BoardShell initial={data} screenId={id} />
     </ThemeScope>
   );
 }

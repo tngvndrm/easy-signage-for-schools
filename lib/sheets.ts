@@ -1,85 +1,41 @@
 import { GoogleAuth } from "google-auth-library";
-import type { Substitution } from "./types";
-
-const SHEET_ID = process.env.SHEET_ID ?? "";
-const SHEET_RANGE = process.env.SHEET_RANGE ?? "Vervangingen!A1:F400";
 
 /**
- * Header names we accept, lowercased and stripped of accents/spaces.
- * Keeping several aliases per column means staff can rename a header slightly
- * without the board going blank.
+ * Shared read-only client for the school's spreadsheet. Each tab gets its own
+ * reader module (substitutions, keys); this holds only what they have in
+ * common — auth, fetching a range, and the forgiving header/date parsing that
+ * keeps a staff-maintained sheet from breaking the board.
  */
-const COLUMN_ALIASES: Record<keyof ColumnMap, string[]> = {
-  datum: ["datum", "date"],
-  period: ["lesuur", "uur", "period"],
-  klas: ["klas", "class", "groep"],
-  absent: ["afwezigeleerkracht", "afwezige", "leerkracht", "absent"],
-  substitute: ["vervanging", "vervanger", "substitute"],
-  lokaal: ["lokaal", "klaslokaal", "room"],
-};
 
-type ColumnMap = {
-  datum: number;
-  period: number;
-  klas: number;
-  absent: number;
-  substitute: number;
-  lokaal: number;
-};
+const SHEET_ID = process.env.SHEET_ID ?? "";
 
-const normalize = (s: string) =>
-  s
+export function isSheetConfigured(): boolean {
+  return SHEET_ID.length > 0;
+}
+
+/** Lowercase, strip accents and anything that isn't a letter. */
+export const normalizeText = (value: string) =>
+  value
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z]/g, "");
 
-function mapColumns(header: string[]): ColumnMap {
-  const found = {} as ColumnMap;
-  for (const key of Object.keys(COLUMN_ALIASES) as (keyof ColumnMap)[]) {
-    const aliases = COLUMN_ALIASES[key];
-    const idx = header.findIndex((h) => aliases.includes(normalize(h ?? "")));
-    found[key] = idx;
-  }
-  return found;
-}
-
-type ParsedPeriod = { label: string; start: number; all: number[] };
-
-/** "1-2", "1 & 2", "1 en 2" -> { label: "1 & 2", all: [1, 2] }. */
-function parsePeriod(raw: string): ParsedPeriod | null {
-  const value = raw.trim();
-  if (!value) return null;
-  const numbers = value.match(/\d+/g);
-  if (!numbers || numbers.length === 0) return null;
-
-  const all = numbers.map(Number);
-  // "1-2" means the block covers 1 through 2, not just its endpoints.
-  const spans = /[-–—]/.test(value) && all.length === 2;
-  const covered = spans
-    ? Array.from({ length: all[1] - all[0] + 1 }, (_, i) => all[0] + i)
-    : all;
-
-  return {
-    label: covered.length > 1 ? covered.join(" & ") : String(covered[0]),
-    start: covered[0],
-    all: covered,
-  };
-}
-
 /**
  * Sheets hands back whatever the cell is formatted as. Reduce the common
- * European variants to yyyy-mm-dd so we can compare against "today".
+ * European variants to yyyy-mm-dd so dates can be compared as strings.
  */
-function normalizeDate(raw: string): string | null {
+export function normalizeDate(raw: string): string | null {
   const value = raw.trim();
   if (!value) return null;
+
   const dmy = value.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
   if (dmy) {
     const [, d, m, y] = dmy;
     const year = y.length === 2 ? `20${y}` : y;
     return `${year}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
+
   const iso = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (iso) {
     const [, y, m, d] = iso;
@@ -88,19 +44,43 @@ function normalizeDate(raw: string): string | null {
   return null;
 }
 
-export function isSheetConfigured(): boolean {
-  return SHEET_ID.length > 0;
+/**
+ * Locate each column by any of its accepted header names. Returns -1 for
+ * columns the sheet doesn't have, so callers can decide what's optional.
+ */
+export function mapColumns<K extends string>(
+  header: string[],
+  aliases: Record<K, string[]>,
+): Record<K, number> {
+  const found = {} as Record<K, number>;
+  for (const key of Object.keys(aliases) as K[]) {
+    found[key] = header.findIndex((cell) =>
+      aliases[key].includes(normalizeText(cell ?? "")),
+    );
+  }
+  return found;
 }
 
-async function fetchRows(): Promise<string[][]> {
-  const auth = new GoogleAuth({
+/** A tick-off cell: anything but empty or an explicit "no" counts as done. */
+export function isTicked(raw: string): boolean {
+  const value = raw.trim();
+  if (!value) return false;
+  return !["nee", "no", "false", "n"].includes(normalizeText(value));
+}
+
+// One auth client for the process; creating one per request re-does discovery.
+let auth: GoogleAuth | null = null;
+
+export async function fetchRange(range: string): Promise<string[][]> {
+  auth ??= new GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
   const client = await auth.getClient();
   const token = await client.getAccessToken();
+
   const url =
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(SHEET_ID)}` +
-    `/values/${encodeURIComponent(SHEET_RANGE)}?valueRenderOption=FORMATTED_VALUE`;
+    `/values/${encodeURIComponent(range)}?valueRenderOption=FORMATTED_VALUE`;
 
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token.token}` },
@@ -111,58 +91,4 @@ async function fetchRows(): Promise<string[][]> {
   }
   const json = (await res.json()) as { values?: string[][] };
   return json.values ?? [];
-}
-
-/**
- * Read the sheet and return today's rows, sorted by period.
- *
- * Blank `Lesuur` cells inherit the previous row's period, so a sheet that still
- * uses merged cells for a multi-row period keeps working.
- */
-export async function readSubstitutions(today: string): Promise<Substitution[]> {
-  const rows = await fetchRows();
-  if (rows.length < 2) return [];
-
-  const columns = mapColumns(rows[0]);
-  if (columns.period < 0) {
-    throw new Error("Sheet has no 'Lesuur' column — check the header row.");
-  }
-
-  const out: Substitution[] = [];
-  let lastPeriod: ParsedPeriod | null = null;
-  let lastDate: string | null = null;
-
-  for (const row of rows.slice(1)) {
-    const cell = (i: number) => (i >= 0 ? (row[i] ?? "").trim() : "");
-
-    const date: string | null = normalizeDate(cell(columns.datum)) ?? lastDate;
-    if (date) lastDate = date;
-
-    const period: ParsedPeriod | null =
-      parsePeriod(cell(columns.period)) ?? lastPeriod;
-    if (period) lastPeriod = period;
-
-    // A "pauze" row is a visual separator in the sheet; the board draws its own.
-    if (normalize(row.join("")) === "pauze") continue;
-
-    const klas = cell(columns.klas);
-    const absent = cell(columns.absent);
-    if (!klas && !absent) continue;
-    if (columns.datum >= 0 && date !== today) continue;
-    if (!period) continue;
-
-    out.push({
-      period: period.label,
-      periodStart: period.start,
-      periods: period.all,
-      klas,
-      absent,
-      substitute: cell(columns.substitute),
-      lokaal: cell(columns.lokaal),
-    });
-  }
-
-  return out.sort(
-    (a, b) => a.periodStart - b.periodStart || a.klas.localeCompare(b.klas),
-  );
 }

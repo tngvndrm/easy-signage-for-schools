@@ -1,4 +1,10 @@
-import type { Birthday, BoardMessage, Substitution, Takeover } from "./types";
+import type {
+  Birthday,
+  BoardMessage,
+  KeyDuty,
+  Substitution,
+  Takeover,
+} from "./types";
 
 /**
  * Stand-in for the Google Sheet + Firestore until they are wired up.
@@ -37,6 +43,26 @@ export const demoMessages: BoardMessage[] = [
 export const demoBirthdays: Birthday[] = [
   { id: "b1", name: "Jan Janssen", klas: "7A" },
   { id: "b2", name: "Amira Haddad", klas: "8C" },
+];
+
+/**
+ * A Friday partway through the morning: of 22 classes most have already
+ * collected their key and been ticked off, and two stragglers from last weekend
+ * still haven't handed theirs back.
+ */
+export const demoKeyDuties: KeyDuty[] = [
+  { id: "6B-return", klas: "6B", student: "Lotte Verbeeck", action: "return", due: "2026-07-24", overdue: true },
+  { id: "9A-return", klas: "9A", student: "Sam De Ridder", action: "return", due: "2026-07-24", overdue: true },
+  { id: "7A-pickup", klas: "7A", student: "Jan Janssen", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "7C-pickup", klas: "7C", student: "Nour El Amrani", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "8A-pickup", klas: "8A", student: "Wout Peeters", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "8B-pickup", klas: "8B", student: "Amira Haddad", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "8C-pickup", klas: "8C", student: "Milan Claes", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "9B-pickup", klas: "9B", student: "Fien Willems", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "9C-pickup", klas: "9C", student: "Arthur Goossens", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "10A-pickup", klas: "10A", student: "Yasmine Aerts", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "10B-pickup", klas: "10B", student: "Tuur Michiels", action: "pickup", due: "2026-07-27", overdue: false },
+  { id: "11A-pickup", klas: "11A", student: "Ella Segers", action: "pickup", due: "2026-07-27", overdue: false },
 ];
 
 /** Flip to a Takeover object (or set ?takeover=1 on the board URL) to preview. */

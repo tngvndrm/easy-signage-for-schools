@@ -30,6 +30,18 @@ export type Birthday = {
   klas: string;
 };
 
+export type KeyDuty = {
+  id: string;
+  klas: string;
+  student: string;
+  /** Collecting the key for the weekend, or bringing it back. */
+  action: "pickup" | "return";
+  /** ISO date the duty falls on. */
+  due: string;
+  /** Date has passed and the front desk hasn't ticked it off. */
+  overdue: boolean;
+};
+
 export type Takeover = {
   id: string;
   title: string;
@@ -47,6 +59,8 @@ export type BoardData = {
   breakAfterPeriod: number | null;
   messages: BoardMessage[];
   birthdays: Birthday[];
+  /** Outstanding classroom-key duties, late ones first. */
+  keys: KeyDuty[];
   /** Non-null => board renders full-screen takeover instead of the dashboard. */
   takeover: Takeover | null;
   /** Server timestamp (ms) of this payload; used for the staleness indicator. */

@@ -86,6 +86,48 @@ showing cached data.
 Append `?now=11:20` (or `?now=wed+12:45`) to a screen URL to freeze it at
 another moment and see how it will look without waiting for the day.
 
+### Classroom keys
+
+One student per class collects their classroom key for the weekend and brings it
+back after. The front desk already tracks this by ticking a list, so the sheet
+*is* the list — the board just shows whoever is still on it.
+
+**How insistent the board gets scales with how much is outstanding**, because
+with 22 classes most students need no reminder at all and only the stragglers do:
+
+| Outstanding | What the board does |
+| --- | --- |
+| More than 6 | A full-screen slide every 3 minutes, for 20 seconds |
+| 1 to 6 | A card in the messages rotation, counted in "3 van 4" |
+| 0 | Nothing |
+
+The slide is deliberately a short interruption rather than a standing takeover:
+the substitution board is what people come to the screen for, and the breaks are
+when they check it. A student passing at any point in the day still catches the
+reminder within a few minutes.
+
+A duty appears once its date arrives and vanishes the moment the front desk
+ticks it off, so the board empties itself as they work through the list. Dates
+already past and still unticked are flagged **te laat** and sort to the front —
+those are the ones worth nagging about. Anything dated in the future stays off
+the board.
+
+Sheet tab `Sleutels`, one row per class per weekend — two ticks per row rather
+than two separate rows, matching how the desk already works:
+
+| Klas | Leerling | Ophalen | Opgehaald | Terugbrengen | Teruggebracht |
+| --- | --- | --- | --- | --- | --- |
+| 7A | Jan Janssen | 31/07/2026 | x | 03/08/2026 | |
+| 6B | Lotte Verbeeck | 24/07/2026 | x | 27/07/2026 | |
+
+The explicit dates are what make the occasional off-rhythm week work without any
+special handling — the usual Friday-out/Monday-back can be prefilled with a
+formula. Any non-empty tick counts as done (`x`, `✓`, `ja`, a date); `nee`/`no`
+counts as not done.
+
+Append `?keys=3` to a screen URL to preview with a trimmed list (demo mode only)
+and see the zone version instead of the slide.
+
 ### Display behaviour
 
 - **Resolution independent.** `html { font-size: calc(100vh / 54) }` and every
@@ -134,6 +176,10 @@ Then open http://localhost:3000. Without `SHEET_ID` it serves demo data.
    Locally, point `GOOGLE_APPLICATION_CREDENTIALS` at the service-account JSON
    key. On Cloud Run, attach the service account to the revision instead — no
    key file to store.
+
+Importable starting points for both tabs are in
+[`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,
+one CSV per tab, keeping the tab names `Vervangingen` and `Sleutels`.
 
 ### Sheet format
 

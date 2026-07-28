@@ -1,12 +1,15 @@
 import {
   demoBirthdays,
+  demoKeyDuties,
   demoMessages,
   demoSubstitutions,
   demoTakeover,
   demoTakeoverPreview,
 } from "./demo-data";
-import { isSheetConfigured, readSubstitutions } from "./sheets";
-import type { BoardData, Substitution } from "./types";
+import { readKeyDuties } from "./keys";
+import { isSheetConfigured } from "./sheets";
+import { readSubstitutions } from "./substitutions";
+import type { BoardData, KeyDuty, Substitution } from "./types";
 
 const TIMEZONE = process.env.TIMEZONE ?? "Europe/Brussels";
 const LOCALE = process.env.LOCALE ?? "nl-BE";
@@ -35,28 +38,47 @@ function dateLabel(now = new Date()): string {
 /**
  * Assemble the board payload.
  *
- * The Sheet is the only source that can fail on us, so a read error falls back
- * to an empty substitution list rather than taking the whole board down — the
- * messages and birthday zones keep working, and the client keeps showing its
- * cached copy until the next successful poll.
+ * The sheet is the only source that can fail on us, so a read error falls back
+ * to an empty list rather than taking the whole board down — the other zones
+ * keep working, and the client keeps showing its cached copy until the next
+ * successful poll. The two tabs fail independently: a broken key sheet must not
+ * cost us the substitution board.
  */
 export async function getBoardData(
-  options: { previewTakeover?: boolean } = {},
+  options: { previewTakeover?: boolean; keyLimit?: number } = {},
 ): Promise<BoardData> {
   const now = new Date();
   const date = todayInSchoolTz(now);
 
   let substitutions: Substitution[] = demoSubstitutions;
-  let demo = true;
+  let keys: KeyDuty[] = demoKeyDuties;
+  const demo = !isSheetConfigured();
 
-  if (isSheetConfigured()) {
-    demo = false;
-    try {
-      substitutions = await readSubstitutions(date);
-    } catch (error) {
-      console.error("[board] sheet read failed", error);
+  if (!demo) {
+    const [subs, duties] = await Promise.allSettled([
+      readSubstitutions(date),
+      readKeyDuties(date),
+    ]);
+
+    if (subs.status === "fulfilled") {
+      substitutions = subs.value;
+    } else {
+      console.error("[board] substitution sheet read failed", subs.reason);
       substitutions = [];
     }
+
+    if (duties.status === "fulfilled") {
+      keys = duties.value;
+    } else {
+      console.error("[board] key sheet read failed", duties.reason);
+      keys = [];
+    }
+  }
+
+  // Demo only: `?keys=2` trims the list so both presentations can be reviewed
+  // without waiting for the front desk to tick people off.
+  if (demo && options.keyLimit !== undefined) {
+    keys = keys.slice(0, Math.max(0, options.keyLimit));
   }
 
   return {
@@ -69,6 +91,7 @@ export async function getBoardData(
     // TODO: replace with Firestore collections once the admin UI lands.
     messages: demoMessages,
     birthdays: demoBirthdays,
+    keys,
     takeover: options.previewTakeover ? demoTakeoverPreview : demoTakeover,
     fetchedAt: now.getTime(),
     demo,
