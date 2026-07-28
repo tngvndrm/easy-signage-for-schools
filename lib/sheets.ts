@@ -61,6 +61,29 @@ export function mapColumns<K extends string>(
   return found;
 }
 
+/**
+ * Find the header row rather than assuming it's the first one. Staff sheets
+ * grow a title line, a blank spacer or a note above the table sooner or later,
+ * and none of that should blank the board. Returns the column map plus the
+ * index the data starts at.
+ */
+export function findHeader<K extends string>(
+  rows: string[][],
+  aliases: Record<K, string[]>,
+  // NoInfer: the key set comes from `aliases`, not from this argument.
+  required: NoInfer<K>,
+  searchDepth = 10,
+): { columns: Record<K, number>; firstDataRow: number } | null {
+  for (let i = 0; i < Math.min(rows.length, searchDepth); i++) {
+    const columns = mapColumns(rows[i], aliases);
+    if (columns[required] >= 0) return { columns, firstDataRow: i + 1 };
+  }
+  return null;
+}
+
+/** The tab named in a range doesn't exist (yet). */
+export class MissingTabError extends Error {}
+
 /** A tick-off cell: anything but empty or an explicit "no" counts as done. */
 export function isTicked(raw: string): boolean {
   const value = raw.trim();
@@ -87,7 +110,13 @@ export async function fetchRange(range: string): Promise<string[][]> {
     cache: "no-store",
   });
   if (!res.ok) {
-    throw new Error(`Sheets API ${res.status}: ${await res.text()}`);
+    const body = await res.text();
+    // A tab that hasn't been created yet is a normal state, not a fault: the
+    // key feature simply stays dormant until someone adds the tab.
+    if (res.status === 400 && /Unable to parse range/i.test(body)) {
+      throw new MissingTabError(`No such tab or range: ${range}`);
+    }
+    throw new Error(`Sheets API ${res.status}: ${body}`);
   }
   const json = (await res.json()) as { values?: string[][] };
   return json.values ?? [];

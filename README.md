@@ -171,21 +171,41 @@ Then open http://localhost:3000. Without `SHEET_ID` it serves demo data.
 
 ## Wiring the Google Sheet
 
-1. In the Google Cloud project, enable the **Google Sheets API** and create a
-   service account.
-2. Share the substitution sheet with that service account's email, **Viewer**.
-3. Set the environment (see `.env.example`):
+The target sheet is **"Signage - Vervangingen (voorbeeld)"**, id
+`1De7Mx1SSBxRVgWXnzKKB9obKvw5EhGM0QaUrz5tM5v4`. `.env.local` is already filled
+in for it, with `SHEET_ID` commented out until credentials exist — setting it
+switches the board off demo data, and without a key every read fails.
+
+Three steps, all needing a Google account this repo doesn't have:
+
+1. In a Google Cloud project, enable the **Google Sheets API**, create a
+   **service account**, and download a JSON key as `service-account.json` here
+   (gitignored). Set `GOOGLE_APPLICATION_CREDENTIALS=./service-account.json`.
+   On Cloud Run, attach the service account to the revision instead — no key
+   file to store.
+2. Share the sheet with that service account's email address as **Viewer**.
+3. Add a **`Sleutels`** tab (the sheet currently has only `Vervangingen` and
+   `Instructies`) with this header row — until it exists the key feature simply
+   stays dormant, the rest of the board is unaffected:
 
    ```
-   SHEET_ID=1AbC...              # the id from the sheet URL
-   SHEET_RANGE=Vervangingen!A1:F400
-   BREAK_AFTER_PERIOD=4          # "pauze" divider is drawn after this period
-   TIMEZONE=Europe/Brussels
+   Klas	Leerling	Ophalen	Opgehaald	Terugbrengen	Teruggebracht
    ```
 
-   Locally, point `GOOGLE_APPLICATION_CREDENTIALS` at the service-account JSON
-   key. On Cloud Run, attach the service account to the revision instead — no
-   key file to store.
+Then uncomment `SHEET_ID` in `.env.local`.
+
+### Reading a staff-maintained sheet
+
+The readers are deliberately forgiving, because a shared sheet never stays
+uniform:
+
+- The header row is **found**, not assumed to be row 1 — a title line or a blank
+  spacer above the table doesn't blank the board.
+- Unknown columns are ignored, so the sheet's extra `Inhoud` column costs
+  nothing. (It isn't displayed — see "Not built yet".)
+- A missing tab is treated as a normal dormant state, not a failure.
+- A read that genuinely fails shows **"Rooster tijdelijk niet beschikbaar"**,
+  never a blank board — an empty list must never be able to mean a broken one.
 
 Importable starting points for both tabs are in
 [`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,
@@ -218,6 +238,11 @@ have to be settled before staff start using it:
 
 Roughly in the order I'd tackle them:
 
+0. **The sheet's `Inhoud` column** — the live sheet carries a 7th column
+   (`Vervangtaak`, `Spel`, `Zelfstudie`) that the board reads past but doesn't
+   show. It's arguably the most actionable thing on a row after the room, but
+   adding it means re-proportioning the five existing columns, so it's a
+   decision rather than an oversight.
 1. **Firestore + admin UI** — messages, birthdays, takeovers currently come from
    `lib/demo-data.ts`. `lib/board.ts` has the seam marked with a `TODO`; the
    board and its types need no changes.

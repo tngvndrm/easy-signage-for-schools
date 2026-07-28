@@ -1,4 +1,10 @@
-import { fetchRange, isTicked, mapColumns, normalizeDate } from "./sheets";
+import {
+  fetchRange,
+  findHeader,
+  isTicked,
+  MissingTabError,
+  normalizeDate,
+} from "./sheets";
 import type { KeyDuty } from "./types";
 
 const KEYS_RANGE = process.env.KEYS_SHEET_RANGE ?? "Sleutels!A1:F200";
@@ -29,17 +35,25 @@ const COLUMNS = {
  * `overdue`; anything dated in the future stays off the board entirely.
  */
 export async function readKeyDuties(today: string): Promise<KeyDuty[]> {
-  const rows = await fetchRange(KEYS_RANGE);
+  let rows: string[][];
+  try {
+    rows = await fetchRange(KEYS_RANGE);
+  } catch (error) {
+    // No Sleutels tab yet — the rest of the board carries on without it.
+    if (error instanceof MissingTabError) return [];
+    throw error;
+  }
   if (rows.length < 2) return [];
 
-  const columns = mapColumns(rows[0], COLUMNS);
-  if (columns.klas < 0) {
+  const header = findHeader(rows, COLUMNS, "klas");
+  if (!header) {
     throw new Error("Key sheet has no 'Klas' column — check the header row.");
   }
+  const { columns } = header;
 
   const out: KeyDuty[] = [];
 
-  for (const row of rows.slice(1)) {
+  for (const row of rows.slice(header.firstDataRow)) {
     const cell = (i: number) => (i >= 0 ? (row[i] ?? "").trim() : "");
 
     const klas = cell(columns.klas);

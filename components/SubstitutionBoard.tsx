@@ -90,9 +90,12 @@ function rowScale(rowCount: number): number {
 export function SubstitutionBoard({
   substitutions,
   breakAfterPeriod,
+  unavailable = false,
 }: {
   substitutions: Substitution[];
   breakAfterPeriod: number | null;
+  /** The sheet couldn't be read — say so rather than implying a quiet day. */
+  unavailable?: boolean;
 }) {
   const groups = groupByPeriod(substitutions);
   const slot = useCurrentSlot();
@@ -111,7 +114,17 @@ export function SubstitutionBoard({
 
       <HeaderRow />
 
-      {groups.length === 0 ? (
+      {unavailable ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-[0.5rem] text-center">
+          <p className="font-display text-[2.2rem] font-bold text-alert">
+            Rooster tijdelijk niet beschikbaar
+          </p>
+          <p className="text-[1.1rem] text-muted">
+            De vervangingen konden niet opgehaald worden — vraag na aan het
+            onthaal.
+          </p>
+        </div>
+      ) : groups.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-[0.5rem] text-center">
           <p className="font-display text-[2.4rem] font-bold text-accent">
             Geen vervangingen vandaag

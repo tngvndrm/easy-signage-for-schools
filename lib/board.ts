@@ -52,6 +52,7 @@ export async function getBoardData(
 
   let substitutions: Substitution[] = demoSubstitutions;
   let keys: KeyDuty[] = demoKeyDuties;
+  let substitutionsUnavailable = false;
   const demo = !isSheetConfigured();
 
   if (!demo) {
@@ -65,6 +66,7 @@ export async function getBoardData(
     } else {
       console.error("[board] substitution sheet read failed", subs.reason);
       substitutions = [];
+      substitutionsUnavailable = true;
     }
 
     if (duties.status === "fulfilled") {
@@ -95,5 +97,6 @@ export async function getBoardData(
     takeover: options.previewTakeover ? demoTakeoverPreview : demoTakeover,
     fetchedAt: now.getTime(),
     demo,
+    substitutionsUnavailable,
   };
 }

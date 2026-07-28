@@ -176,6 +176,7 @@ export function BoardShell({
         <SubstitutionBoard
           substitutions={data.substitutions}
           breakAfterPeriod={data.breakAfterPeriod}
+          unavailable={data.substitutionsUnavailable}
         />
       )}
 

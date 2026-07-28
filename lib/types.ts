@@ -67,4 +67,9 @@ export type BoardData = {
   fetchedAt: number;
   /** True when the payload came from mock data, not a real Sheet. */
   demo: boolean;
+  /**
+   * The substitution sheet couldn't be read. Distinct from "no substitutions
+   * today" — an empty board must never be able to mean a broken one.
+   */
+  substitutionsUnavailable: boolean;
 };

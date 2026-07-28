@@ -1,12 +1,12 @@
 import {
   fetchRange,
-  mapColumns,
+  findHeader,
   normalizeDate,
   normalizeText,
 } from "./sheets";
 import type { Substitution } from "./types";
 
-const SHEET_RANGE = process.env.SHEET_RANGE ?? "Vervangingen!A1:F400";
+const SHEET_RANGE = process.env.SHEET_RANGE ?? "Vervangingen!A1:H400";
 
 /**
  * Header names we accept. Keeping several aliases per column means staff can
@@ -54,16 +54,17 @@ export async function readSubstitutions(today: string): Promise<Substitution[]> 
   const rows = await fetchRange(SHEET_RANGE);
   if (rows.length < 2) return [];
 
-  const columns = mapColumns(rows[0], COLUMNS);
-  if (columns.period < 0) {
+  const header = findHeader(rows, COLUMNS, "period");
+  if (!header) {
     throw new Error("Sheet has no 'Lesuur' column — check the header row.");
   }
+  const { columns } = header;
 
   const out: Substitution[] = [];
   let lastPeriod: ParsedPeriod | null = null;
   let lastDate: string | null = null;
 
-  for (const row of rows.slice(1)) {
+  for (const row of rows.slice(header.firstDataRow)) {
     const cell = (i: number) => (i >= 0 ? (row[i] ?? "").trim() : "");
 
     const date: string | null = normalizeDate(cell(columns.datum)) ?? lastDate;
