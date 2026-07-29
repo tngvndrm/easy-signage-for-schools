@@ -42,6 +42,20 @@ export type KeyDuty = {
   overdue: boolean;
 };
 
+export type EventItem = {
+  id: string;
+  /** The class performing, e.g. "Klas 100". */
+  klas: string;
+  title: string;
+  synopsis: string;
+  /** ISO date of the event itself. */
+  date: string;
+  /** Pre-formatted "Donderdag 17 september · 20u00", built server-side. */
+  whenLabel: string;
+  /** Direct image URL — Drive share links are rewritten by the reader. */
+  posterUrl: string;
+};
+
 export type Takeover = {
   id: string;
   title: string;
@@ -61,6 +75,8 @@ export type BoardData = {
   birthdays: Birthday[];
   /** Outstanding classroom-key duties, late ones first. */
   keys: KeyDuty[];
+  /** Events currently within their announcement window, soonest first. */
+  events: EventItem[];
   /** Non-null => board renders full-screen takeover instead of the dashboard. */
   takeover: Takeover | null;
   /** Server timestamp (ms) of this payload; used for the staleness indicator. */

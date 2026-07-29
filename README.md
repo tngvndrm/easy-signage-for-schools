@@ -138,6 +138,37 @@ To see either presentation without waiting for its cycle, append to a screen URL
 
 Both are also linked from the site index at `/`.
 
+### Events and posters
+
+Theatre plays and similar events get the whole screen, in short bursts, because
+the artwork is the point — a portrait poster gets the full display height, which
+a panel in the dashboard could never give it.
+
+Sheet tab `Evenementen`:
+
+| Datum | Tijd | Toon vanaf | Klas | Titel | Synopsis | Poster |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-09-17 | 20u00 | 2026-09-03 | Klas 100 | Een Midzomernachtsdroom | Vier geliefden… | *(Drive link)* |
+
+The announcement puts itself up and takes itself down: it appears on
+`Toon vanaf` (or two weeks before, if blank) and disappears after the event
+date, so nobody has to remember to clear last month's play off the screens.
+
+**Posters** live in Drive. Paste the ordinary Share link — the reader rewrites
+it to a direct-image URL. The file must be shared **"anyone with the link"**:
+the board's browser is anonymous and doesn't carry the service account's access,
+so a restricted file shows as a blank space.
+
+Preview with `?event=1`, which falls back to a sample when nothing is scheduled.
+
+### One interruption at a time
+
+The key panel and the event poster share a single rotation rather than running
+their own timers — two timers would eventually fire together and fight over the
+screen. Every 3 minutes the board shows the next one due and then returns to the
+dashboard. An admin takeover outranks both, since it was scheduled for that
+exact day on purpose.
+
 ### Display behaviour
 
 - **Resolution independent.** `html { font-size: calc(100vh / 48) }` and every

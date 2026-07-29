@@ -1,15 +1,22 @@
 import {
   demoBirthdays,
+  demoEvents,
   demoKeyDuties,
   demoMessages,
   demoSubstitutions,
   demoTakeover,
   demoTakeoverPreview,
 } from "./demo-data";
+import { readEvents } from "./events";
 import { readKeyDuties } from "./keys";
 import { isSheetConfigured } from "./sheets";
 import { readSubstitutions } from "./substitutions";
-import type { BoardData, KeyDuty, Substitution } from "./types";
+import type {
+  BoardData,
+  EventItem,
+  KeyDuty,
+  Substitution,
+} from "./types";
 
 const TIMEZONE = process.env.TIMEZONE ?? "Europe/Brussels";
 const LOCALE = process.env.LOCALE ?? "nl-BE";
@@ -50,6 +57,8 @@ export async function getBoardData(
     keyLimit?: number;
     /** Preview another school day, e.g. to check tomorrow's entries. */
     date?: string;
+    /** Preview the event poster even when no event is scheduled. */
+    previewEvent?: boolean;
   } = {},
 ): Promise<BoardData> {
   const now = new Date();
@@ -57,13 +66,15 @@ export async function getBoardData(
 
   let substitutions: Substitution[] = demoSubstitutions;
   let keys: KeyDuty[] = demoKeyDuties;
+  let events: EventItem[] = demoEvents;
   let substitutionsUnavailable = false;
   const demo = !isSheetConfigured();
 
   if (!demo) {
-    const [subs, duties] = await Promise.allSettled([
+    const [subs, duties, evts] = await Promise.allSettled([
       readSubstitutions(date),
       readKeyDuties(date),
+      readEvents(date),
     ]);
 
     if (subs.status === "fulfilled") {
@@ -80,6 +91,13 @@ export async function getBoardData(
       console.error("[board] key sheet read failed", duties.reason);
       keys = [];
     }
+
+    if (evts.status === "fulfilled") {
+      events = evts.value;
+    } else {
+      console.error("[board] events sheet read failed", evts.reason);
+      events = [];
+    }
   }
 
   // Demo only: `?keys=2` trims the list so both presentations can be reviewed
@@ -87,6 +105,10 @@ export async function getBoardData(
   if (demo && options.keyLimit !== undefined) {
     keys = keys.slice(0, Math.max(0, options.keyLimit));
   }
+
+  // Same affordance as ?takeover=1: show a sample so the layout can be
+  // reviewed before a real event is ever entered.
+  if (options.previewEvent && events.length === 0) events = demoEvents;
 
   return {
     date,
@@ -99,6 +121,7 @@ export async function getBoardData(
     messages: demoMessages,
     birthdays: demoBirthdays,
     keys,
+    events,
     takeover: options.previewTakeover ? demoTakeoverPreview : demoTakeover,
     fetchedAt: now.getTime(),
     demo,

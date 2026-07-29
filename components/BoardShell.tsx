@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BirthdayZone } from "./BirthdayZone";
 import { BrandMark } from "./BrandMark";
 import { Clock } from "./Clock";
+import { EventPoster } from "./EventPoster";
 import { KeyPanel } from "./KeyPanel";
 import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
@@ -21,11 +22,14 @@ const POLL_MS = 30_000;
  * and a student passing at any point still catches the reminder within a few
  * minutes. Once only a handful are left it drops to the messages zone instead.
  */
-const KEY_PANEL_EVERY_MS = 3 * 60_000;
+const INTERRUPT_EVERY_MS = 3 * 60_000;
 const KEY_PANEL_FOR_MS = 20_000;
+const EVENT_POSTER_FOR_MS = 25_000;
 /** After this long without a successful poll, tell the room the data is old. */
 const STALE_MS = 5 * 60_000;
 const CACHE_KEY = "infoborden:board";
+
+type Interrupt = "keys" | "event";
 
 function readCache(): BoardData | null {
   try {
@@ -48,38 +52,60 @@ export function BoardShell({
   initial,
   screenId,
   forceKeyPanel = false,
+  forceEvent = false,
 }: {
   initial: BoardData;
   screenId: string;
   /** Preview: hold the key panel on screen instead of cycling it. */
   forceKeyPanel?: boolean;
+  /** Preview: hold the event poster on screen instead of cycling it. */
+  forceEvent?: boolean;
 }) {
   const [data, setData] = useState<BoardData>(initial);
   const [stale, setStale] = useState(false);
   const lastOkRef = useRef<number>(Date.now());
   const idle = useIdlePointer();
-  const [keyPanelOn, setKeyPanelOn] = useState(false);
+  const [showing, setShowing] = useState<Interrupt | null>(null);
 
   const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
-  // Swaps into the substitution board's slot; everything else stays put.
-  const showKeys =
-    (keyPanelOn || forceKeyPanel) && data.keys.length > 0;
+  const event = data.events[0] ?? null;
+
+  /*
+   * One rotation drives every interruption. Two independent timers would
+   * eventually fire together and fight over the screen; taking turns also
+   * means adding a third kind later costs nothing.
+   */
+  const queue: Interrupt[] = [];
+  if (manyKeys) queue.push("keys");
+  if (event) queue.push("event");
+  const queueKey = queue.join(",");
 
   useEffect(() => {
-    if (!manyKeys) {
-      setKeyPanelOn(false);
+    const due = queueKey ? (queueKey.split(",") as Interrupt[]) : [];
+    if (due.length === 0) {
+      setShowing(null);
       return;
     }
+    let turn = 0;
     let hide: ReturnType<typeof setTimeout>;
-    const show = setInterval(() => {
-      setKeyPanelOn(true);
-      hide = setTimeout(() => setKeyPanelOn(false), KEY_PANEL_FOR_MS);
-    }, KEY_PANEL_EVERY_MS);
+    const cycle = setInterval(() => {
+      const next = due[turn++ % due.length];
+      setShowing(next);
+      hide = setTimeout(
+        () => setShowing(null),
+        next === "keys" ? KEY_PANEL_FOR_MS : EVENT_POSTER_FOR_MS,
+      );
+    }, INTERRUPT_EVERY_MS);
     return () => {
-      clearInterval(show);
+      clearInterval(cycle);
       clearTimeout(hide);
     };
-  }, [manyKeys]);
+  }, [queueKey]);
+
+  // Swaps into the substitution board's slot; everything else stays put.
+  const showKeys =
+    (showing === "keys" || forceKeyPanel) && data.keys.length > 0;
+  const showEvent = (showing === "event" || forceEvent) && event !== null;
 
   const poll = useCallback(async () => {
     try {
@@ -135,6 +161,17 @@ export function BoardShell({
         data-idle={idle}
       >
         <Takeover takeover={data.takeover} />
+      </main>
+    );
+  }
+
+  if (showEvent && event) {
+    return (
+      <main
+        className="kiosk h-screen w-screen overflow-hidden"
+        data-idle={idle}
+      >
+        <EventPoster event={event} />
       </main>
     );
   }

@@ -28,6 +28,7 @@ export default async function ScreenPage({
   const dateParam = Array.isArray(query.date) ? query.date[0] : query.date;
   const data = await getBoardData({
     previewTakeover,
+    previewEvent: query.event === "1",
     date:
       dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
         ? dateParam
@@ -42,6 +43,7 @@ export default async function ScreenPage({
         screenId={id}
         // ?keypanel=1 pins the key panel on, rather than waiting out its cycle.
         forceKeyPanel={query.keypanel === "1"}
+        forceEvent={query.event === "1"}
       />
     </ThemeScope>
   );

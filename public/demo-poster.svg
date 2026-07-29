@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" width="600" height="900">
+  <title>Demo poster</title>
+  <rect width="600" height="900" fill="#20414e" />
+  <circle cx="300" cy="300" r="170" fill="#f7ebd3" opacity="0.95" />
+  <path d="M0 640 C 140 560, 260 700, 380 620 S 560 560, 600 610 L600 900 L0 900 Z" fill="#EC674A" opacity="0.9" />
+  <path d="M0 720 C 160 660, 300 780, 430 700 S 570 660, 600 690 L600 900 L0 900 Z" fill="#D99A22" opacity="0.85" />
+  <g fill="#20414e" opacity="0.85">
+    <circle cx="250" cy="270" r="14" />
+    <circle cx="350" cy="270" r="14" />
+    <path d="M240 340 Q300 390 360 340" stroke="#20414e" stroke-width="12" fill="none" stroke-linecap="round" />
+  </g>
+  <text x="300" y="800" text-anchor="middle" font-family="Georgia, serif" font-size="52" fill="#fdfaf7" font-style="italic">Midzomernacht</text>
+  <text x="300" y="855" text-anchor="middle" font-family="monospace" font-size="24" fill="#f7ebd3" letter-spacing="6">KLAS 100</text>
+</svg>

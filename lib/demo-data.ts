@@ -1,6 +1,7 @@
 import type {
   Birthday,
   BoardMessage,
+  EventItem,
   KeyDuty,
   Substitution,
   Takeover,
@@ -63,6 +64,23 @@ export const demoKeyDuties: KeyDuty[] = [
   { id: "10A-pickup", klas: "10A", student: "Yasmine Aerts", action: "pickup", due: "2026-07-27", overdue: false },
   { id: "10B-pickup", klas: "10B", student: "Tuur Michiels", action: "pickup", due: "2026-07-27", overdue: false },
   { id: "11A-pickup", klas: "11A", student: "Ella Segers", action: "pickup", due: "2026-07-27", overdue: false },
+];
+
+/**
+ * A play in its announcement window. The poster is a local placeholder so the
+ * layout can be checked without a Drive link; real ones come from the sheet.
+ */
+export const demoEvents: EventItem[] = [
+  {
+    id: "demo-play",
+    klas: "Klas 100",
+    title: "Een Midzomernachtsdroom",
+    synopsis:
+      "Vier geliefden, een groep amateurtoneelspelers en een bos vol elfen — Shakespeare's zomerkomedie, gespeeld door onze eigen klas 100. Kaarten aan het onthaal.",
+    date: "2026-09-17",
+    whenLabel: "Donderdag 17 september · 20u00",
+    posterUrl: "/demo-poster.svg",
+  },
 ];
 
 /** Flip to a Takeover object (or set ?takeover=1 on the board URL) to preview. */
