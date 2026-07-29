@@ -1,0 +1,32 @@
+[Unit]
+Description=Infobord kiosk (cage + Chromium)
+After=systemd-user-sessions.service network-online.target getty@tty1.service
+Wants=network-online.target
+# Take tty1 away from the login prompt — the board owns the screen.
+Conflicts=getty@tty1.service
+
+[Service]
+User=infobordbeheerder
+
+# PAMName=login makes logind open a real seat session on tty1, which is what
+# grants cage DRM master and input access without any display manager. This is
+# the piece that replaces the whole desktop stack.
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+
+# SCREEN and BOARD_URL live here so the same unit ships to every Pi unchanged.
+EnvironmentFile=-/etc/default/infoborden-kiosk
+
+ExecStart=/opt/infoborden/deploy/kiosk-cage.sh
+
+# A signage screen heals itself; nobody is watching it.
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

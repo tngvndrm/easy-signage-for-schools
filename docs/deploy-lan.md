@@ -81,70 +81,51 @@ curl -s http://infobord.local/api/board | head -c 200
 
 ## 5. Point each screen at it
 
-On each display Pi, install `deploy/kiosk.sh` as `/home/pi/kiosk.sh`, make it
-executable, and set the screen number:
+Each display Pi runs the board full-screen under **cage**, a minimal Wayland
+kiosk compositor. No desktop, no display manager, no autologin greeter — cage
+boots straight into one full-screen Chromium and nothing else. Pi OS **Lite** is
+the right image for the screens too; the desktop packages are not needed.
+
+On each display Pi:
 
 ```bash
-chmod +x /home/pi/kiosk.sh
-echo 'SCREEN=1' | sudo tee /etc/default/infoborden-kiosk   # 1, 2 or 3 per Pi
+sudo apt update && sudo apt install -y cage chromium
+sudo git clone <this-repo> /opt/infoborden        # or copy just deploy/
+sudo cp /opt/infoborden/deploy/infoborden-kiosk.service /etc/systemd/system/
 ```
 
-Wire it to start with the desktop. On Raspberry Pi OS Bookworm (Wayland), add to
-`~/.config/wayfire.ini`:
-
-```ini
-[autostart]
-kiosk = /home/pi/kiosk.sh
-```
-
-On an X-based image, use `~/.config/autostart/kiosk.desktop` instead:
-
-```ini
-[Desktop Entry]
-Type=Application
-Name=Infobord
-Exec=/home/pi/kiosk.sh
-X-GNOME-Autostart-enabled=true
-```
-
-### Testing the kiosk over SSH
-
-`kiosk.sh` starts a browser, so it needs the Pi's own display session. Run it
-plain over SSH and it fails with "cannot open display". Point it at the session
-first:
+Set which screen this Pi is, and where the board lives. During a laptop test
+that's the dev server's LAN address; in production it's the host from step 1:
 
 ```bash
-# Raspberry Pi OS Bookworm (Wayland — the Pi 4 default)
-export XDG_RUNTIME_DIR=/run/user/1000
-export WAYLAND_DISPLAY=wayland-0
-/home/pi/kiosk.sh
-
-# Older X-based images
-export DISPLAY=:0 XAUTHORITY=/home/pi/.Xauthority
-/home/pi/kiosk.sh
+sudo tee /etc/default/infoborden-kiosk <<'EOF'
+SCREEN=1
+BOARD_URL=http://infobord.local/screen/1
+EOF
 ```
 
-Both need the Pi booted to the **desktop with autologin**
-(`sudo raspi-config` → System Options → Boot / Auto Login → Desktop Autologin).
-A display Pi running Pi OS Lite has no compositor at all, so there is nothing
-for Chromium to attach to — the Lite image is right for the *host*, not for the
-screens.
+The kiosk runs on the console, so make that the boot target (no desktop) and
+start it:
 
-Under Wayland the `xset` calls in the script are silently skipped, since they're
-X-only. Blanking is a compositor setting there: in `~/.config/wayfire.ini`,
-
-```ini
-[idle]
-dpms_timeout = -1
-screensaver_timeout = -1
+```bash
+sudo systemctl set-default multi-user.target
+sudo systemctl enable --now infoborden-kiosk
 ```
+
+The board should appear on the panel within a few seconds. If it doesn't:
+
+```bash
+journalctl -u infoborden-kiosk -b --no-pager | tail -30
+```
+
+- `Permission denied` on `/dev/dri` or input → the seat session didn't grant
+  device access. Add the user to the hardware groups and reboot:
+  `sudo usermod -aG video,render,input infobordbeheerder`.
+- A blank window but the service is running → Chromium reached the compositor
+  but not the board. Check `BOARD_URL` is right and reachable with
+  `curl -I "$BOARD_URL"`.
 
 A nightly reboot keeps everything honest:
-
-```bash
-sudo crontab -e
-# 0 4 * * * /sbin/shutdown -r now
-```
 
 ## Updating
 
