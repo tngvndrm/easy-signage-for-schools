@@ -22,7 +22,10 @@ function groupByPeriod(rows: Substitution[]): Group[] {
   return groups;
 }
 
-const COLUMNS = "6.5rem 7rem 1.35fr 1.35fr 8rem";
+// Lokaal sizes to its content within bounds: real room names run from "A12"
+// to "Lokaal van 7A", and a fixed width either wraps the long ones or wastes
+// space on the short ones.
+const COLUMNS = "6.5rem 7rem 1.3fr 1.3fr minmax(8rem, 13rem)";
 
 function HeaderRow() {
   return (
@@ -201,7 +204,7 @@ export function SubstitutionBoard({
                           </span>
                         )}
                       </span>
-                      <span className="text-right font-display text-[1.65em] font-bold leading-none text-calm">
+                      <span className="truncate text-right font-display text-[1.65em] font-bold leading-none text-calm">
                         {row.lokaal || "—"}
                       </span>
                     </div>

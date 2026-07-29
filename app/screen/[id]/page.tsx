@@ -25,8 +25,13 @@ export default async function ScreenPage({
   const keysParam = Array.isArray(query.keys) ? query.keys[0] : query.keys;
   const keyLimit = keysParam !== undefined ? Number(keysParam) : undefined;
 
+  const dateParam = Array.isArray(query.date) ? query.date[0] : query.date;
   const data = await getBoardData({
     previewTakeover,
+    date:
+      dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+        ? dateParam
+        : undefined,
     keyLimit: Number.isFinite(keyLimit) ? keyLimit : undefined,
   });
 

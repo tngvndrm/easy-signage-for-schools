@@ -184,15 +184,21 @@ Three steps, all needing a Google account this repo doesn't have:
    On Cloud Run, attach the service account to the revision instead — no key
    file to store.
 2. Share the sheet with that service account's email address as **Viewer**.
-3. Add a **`Sleutels`** tab (the sheet currently has only `Vervangingen` and
-   `Instructies`) with this header row — until it exists the key feature simply
-   stays dormant, the rest of the board is unaffected:
+3. Add a **`Sleutels`** tab — until it exists the key feature simply stays
+   dormant, the rest of the board is unaffected:
 
    ```
-   Klas	Leerling	Ophalen	Opgehaald	Terugbrengen	Teruggebracht
+   Datum	Klas	Leerling	Ophalen	Opgehaald	Terugbrengen	Teruggebracht
    ```
 
-Then uncomment `SHEET_ID` in `.env.local`.
+   `Datum` is optional: it stands in as the pickup date when `Ophalen` is left
+   blank, which makes loading a whole trimester up front easier.
+
+Then uncomment `SHEET_ID` in `.env.local`. `npm run check:sheet` verifies each
+step and prints the service-account address to share with.
+
+Append `?date=2026-09-02` to a screen URL (or `/api/board`) to render another
+school day — useful for checking entries before the day arrives.
 
 ### Reading a staff-maintained sheet
 

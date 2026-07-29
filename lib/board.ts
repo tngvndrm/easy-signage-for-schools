@@ -45,10 +45,15 @@ function dateLabel(now = new Date()): string {
  * cost us the substitution board.
  */
 export async function getBoardData(
-  options: { previewTakeover?: boolean; keyLimit?: number } = {},
+  options: {
+    previewTakeover?: boolean;
+    keyLimit?: number;
+    /** Preview another school day, e.g. to check tomorrow's entries. */
+    date?: string;
+  } = {},
 ): Promise<BoardData> {
   const now = new Date();
-  const date = todayInSchoolTz(now);
+  const date = options.date ?? todayInSchoolTz(now);
 
   let substitutions: Substitution[] = demoSubstitutions;
   let keys: KeyDuty[] = demoKeyDuties;
@@ -85,7 +90,7 @@ export async function getBoardData(
 
   return {
     date,
-    dateLabel: dateLabel(now),
+    dateLabel: dateLabel(options.date ? new Date(`${options.date}T12:00:00`) : now),
     substitutions,
     breakAfterPeriod: Number.isFinite(BREAK_AFTER_PERIOD)
       ? BREAK_AFTER_PERIOD

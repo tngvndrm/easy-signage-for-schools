@@ -6,7 +6,8 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p ${PORT:-3000}",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:sheet": "node --env-file-if-exists=.env.local scripts/check-sheet.mjs"
   },
   "dependencies": {
     "google-auth-library": "^10.5.0",
