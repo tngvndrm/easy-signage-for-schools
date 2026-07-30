@@ -12,6 +12,8 @@ export type Substitution = {
   /** Empty string means "no substitute" — rendered as a "geen les" chip. */
   substitute: string;
   lokaal: string;
+  /** Optional task the class works on, e.g. "Zelfstudie". Empty when unset. */
+  content: string;
 };
 
 export type BoardMessage = {

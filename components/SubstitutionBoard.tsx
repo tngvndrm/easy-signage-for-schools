@@ -27,6 +27,15 @@ function groupByPeriod(rows: Substitution[]): Group[] {
 // space on the short ones.
 const COLUMNS = "6.5rem 7rem 1.3fr 1.3fr minmax(8rem, 13rem)";
 
+/**
+ * A short task like "Zelfstudie" or "Toets" reads as a category, so it gets a
+ * pill. Anything longer is a free-form instruction and stays plain text, where
+ * a pill would just look like a cramped label.
+ */
+function isShortTask(content: string): boolean {
+  return content.length <= 16 && !/\s\S+\s/.test(content.trim());
+}
+
 function HeaderRow() {
   return (
     <div
@@ -195,15 +204,27 @@ export function SubstitutionBoard({
                       <span className="truncate text-[1.5em] font-light leading-none text-muted">
                         {row.absent}
                       </span>
-                      <span className="truncate text-[1.55em] font-bold leading-none">
-                        {row.substitute ? (
-                          row.substitute
-                        ) : (
-                          <span className="inline-block rounded-sm bg-alert-bg px-[0.45em] py-[0.2em] text-[0.78em] font-bold text-alert">
-                            Geen les
-                          </span>
-                        )}
-                      </span>
+                      <div className="flex min-w-0 items-baseline gap-[0.6em]">
+                        <span className="shrink-0 text-[1.55em] font-bold leading-none">
+                          {row.substitute ? (
+                            row.substitute
+                          ) : (
+                            <span className="inline-block rounded-sm bg-alert-bg px-[0.45em] py-[0.2em] text-[0.78em] font-bold text-alert">
+                              Geen les
+                            </span>
+                          )}
+                        </span>
+                        {row.content &&
+                          (isShortTask(row.content) ? (
+                            <span className="shrink-0 rounded-sm bg-surface-2 px-[0.55em] py-[0.18em] text-[0.82em] font-bold leading-none text-calm">
+                              {row.content}
+                            </span>
+                          ) : (
+                            <span className="truncate text-[0.95em] font-light leading-none text-muted">
+                              {row.content}
+                            </span>
+                          ))}
+                      </div>
                       <span className="truncate text-right font-display text-[1.65em] font-bold leading-none text-calm">
                         {row.lokaal || "—"}
                       </span>

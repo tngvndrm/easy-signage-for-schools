@@ -19,7 +19,18 @@ const COLUMNS = {
   absent: ["afwezigeleerkracht", "afwezige", "leerkracht", "absent"],
   substitute: ["vervanging", "vervanger", "substitute"],
   lokaal: ["lokaal", "klaslokaal", "room"],
+  content: ["inhoud", "taak", "opdracht", "content", "task"],
 };
+
+/**
+ * Staff write "nvt", "-" or "/" to mean "no task worth showing". Treat those as
+ * empty so the board doesn't render a meaningless subline under the substitute.
+ */
+function contentOrBlank(raw: string): string {
+  return ["nvt", "nvt.", "na", "geen", ""].includes(normalizeText(raw))
+    ? ""
+    : raw;
+}
 
 type ParsedPeriod = { label: string; start: number; all: number[] };
 
@@ -91,6 +102,7 @@ export async function readSubstitutions(today: string): Promise<Substitution[]> 
       absent,
       substitute: cell(columns.substitute),
       lokaal: cell(columns.lokaal),
+      content: contentOrBlank(cell(columns.content)),
     });
   }
 
