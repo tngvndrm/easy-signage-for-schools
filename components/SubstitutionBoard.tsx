@@ -210,13 +210,13 @@ export function SubstitutionBoard({
                             row.substitute
                           ) : (
                             <span className="inline-block rounded-sm bg-alert-bg px-[0.45em] py-[0.2em] text-[0.78em] font-bold text-alert">
-                              Geen les
+                              Info volgt
                             </span>
                           )}
                         </span>
                         {row.content &&
                           (isShortTask(row.content) ? (
-                            <span className="shrink-0 rounded-sm bg-accent/15 px-[0.6em] py-[0.26em] text-[0.98em] font-bold leading-none text-accent">
+                            <span className="shrink-0 rounded-sm bg-accent/15 px-[0.6em] py-[0.26em] text-[0.98em] font-normal leading-none text-accent">
                               {row.content}
                             </span>
                           ) : (

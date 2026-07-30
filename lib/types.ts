@@ -9,7 +9,7 @@ export type Substitution = {
   periods: number[];
   klas: string;
   absent: string;
-  /** Empty string means "no substitute" — rendered as a "geen les" chip. */
+  /** Empty string means "not filled in yet" — rendered as an "Info volgt" chip. */
   substitute: string;
   lokaal: string;
   /** Optional task the class works on, e.g. "Zelfstudie". Empty when unset. */
