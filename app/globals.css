@@ -144,6 +144,19 @@ body {
   cursor: none;
 }
 
+/*
+ * A screen with no pointing device at all (a wall panel) never needs a cursor,
+ * so hide it outright there — this covers cage's own pointer, which the
+ * idle-based rule above can't reach because no mouse event ever fires. A laptop
+ * reports a fine pointer and is unaffected.
+ */
+@media (pointer: none) {
+  .kiosk,
+  .kiosk * {
+    cursor: none !important;
+  }
+}
+
 /* Small caps label used for column headers and zone titles. */
 .eyebrow {
   font-family: var(--font-mono);
