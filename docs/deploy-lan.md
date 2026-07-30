@@ -91,7 +91,7 @@ the right image for the screens too; the desktop packages are not needed.
 On each display Pi:
 
 ```bash
-sudo apt update && sudo apt install -y cage chromium
+sudo apt update && sudo apt install -y cage chromium wlrctl
 sudo git clone <this-repo> /opt/infoborden        # or copy just deploy/
 sudo cp /opt/infoborden/deploy/infoborden-kiosk.service /etc/systemd/system/
 ```

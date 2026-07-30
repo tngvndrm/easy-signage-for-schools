@@ -15,6 +15,9 @@ const averia = Averia_Sans_Libre({
 export const metadata: Metadata = {
   title: "Infoborden — Steinerschool Gent",
   description: "Vervangingen, mededelingen en verjaardagen",
+  // Stop Chromium offering to translate the Dutch board — the "Translate?"
+  // menu was appearing in the corner of the kiosk.
+  other: { google: "notranslate" },
 };
 
 export const viewport: Viewport = {
@@ -32,7 +35,7 @@ export default function RootLayout({
   const { theme, accent } = resolveTheme();
 
   return (
-    <html lang="nl" data-theme={theme} data-accent={accent}>
+    <html lang="nl" translate="no" data-theme={theme} data-accent={accent}>
       <body className={averia.variable}>{children}</body>
     </html>
   );
