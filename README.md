@@ -169,6 +169,24 @@ screen. Every 3 minutes the board shows the next one due and then returns to the
 dashboard. An admin takeover outranks both, since it was scheduled for that
 exact day on purpose.
 
+### Birthdays
+
+The whole-school birthday list lives in the sheet, imported once at the start of
+the year and topped up by hand as students arrive. The board shows whoever has a
+birthday today — matched on **day and month only**, so the stored birth year is
+ignored and the same list surfaces the right names every year without editing.
+
+Sheet tab `Verjaardagen`:
+
+| Voornaam | Naam | Klas | Datum |
+| --- | --- | --- | --- |
+| Jan | Janssen | 7A | 15/09/2011 |
+| Amira | Haddad | 8C | 03/02/2010 |
+
+First and last name are joined for display ("Jan Janssen"). Dates read the same
+forgiving formats as the rest of the sheet (`15/09/2011`, `15/9/2011`,
+`2011-09-15`). A missing tab just leaves the birthday zone empty.
+
 ### Display behaviour
 
 - **Resolution independent.** `html { font-size: calc(100vh / 48) }` and every
@@ -215,11 +233,13 @@ Three steps, all needing a Google account this repo doesn't have:
    On Cloud Run, attach the service account to the revision instead — no key
    file to store.
 2. Share the sheet with that service account's email address as **Viewer**.
-3. Add a **`Sleutels`** tab — until it exists the key feature simply stays
-   dormant, the rest of the board is unaffected:
+3. Add a **`Sleutels`** tab (keys) and a **`Verjaardagen`** tab (birthdays) —
+   until each exists its feature simply stays dormant, the rest of the board is
+   unaffected:
 
    ```
    Datum	Klas	Leerling	Ophalen	Opgehaald	Terugbrengen	Teruggebracht
+   Voornaam	Naam	Klas	Datum
    ```
 
    `Datum` is optional: it stands in as the pickup date when `Ophalen` is left

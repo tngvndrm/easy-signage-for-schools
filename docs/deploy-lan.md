@@ -24,6 +24,8 @@ resolves without anyone managing DHCP reservations:
 ```bash
 sudo hostnamectl set-hostname infobord
 sudo apt update && sudo apt install -y git avahi-daemon
+# The host clock decides what "today" is for every screen — keep it synced.
+sudo timedatectl set-ntp true
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs
 sudo useradd --system --home /opt/infoborden --shell /usr/sbin/nologin infoborden
 ```

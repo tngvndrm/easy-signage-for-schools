@@ -7,11 +7,13 @@ import {
   demoTakeover,
   demoTakeoverPreview,
 } from "./demo-data";
+import { readBirthdays } from "./birthdays";
 import { readEvents } from "./events";
 import { readKeyDuties } from "./keys";
 import { isSheetConfigured } from "./sheets";
 import { readSubstitutions } from "./substitutions";
 import type {
+  Birthday,
   BoardData,
   EventItem,
   KeyDuty,
@@ -67,14 +69,16 @@ export async function getBoardData(
   let substitutions: Substitution[] = demoSubstitutions;
   let keys: KeyDuty[] = demoKeyDuties;
   let events: EventItem[] = demoEvents;
+  let birthdays: Birthday[] = demoBirthdays;
   let substitutionsUnavailable = false;
   const demo = !isSheetConfigured();
 
   if (!demo) {
-    const [subs, duties, evts] = await Promise.allSettled([
+    const [subs, duties, evts, bdays] = await Promise.allSettled([
       readSubstitutions(date),
       readKeyDuties(date),
       readEvents(date),
+      readBirthdays(date),
     ]);
 
     if (subs.status === "fulfilled") {
@@ -98,6 +102,13 @@ export async function getBoardData(
       console.error("[board] events sheet read failed", evts.reason);
       events = [];
     }
+
+    if (bdays.status === "fulfilled") {
+      birthdays = bdays.value;
+    } else {
+      console.error("[board] birthday sheet read failed", bdays.reason);
+      birthdays = [];
+    }
   }
 
   // Demo only: `?keys=2` trims the list so both presentations can be reviewed
@@ -119,7 +130,7 @@ export async function getBoardData(
       : null,
     // TODO: replace with Firestore collections once the admin UI lands.
     messages: demoMessages,
-    birthdays: demoBirthdays,
+    birthdays,
     keys,
     events,
     takeover: options.previewTakeover ? demoTakeoverPreview : demoTakeover,
