@@ -137,6 +137,16 @@ sudo systemctl restart infoborden
 All three screens pick the change up on their next poll — within 30 seconds, no
 need to touch the display Pis.
 
+## Never point a screen at `next dev`
+
+The screens must load the **production** server — the standalone build from step
+2, or `npm run start`. Next's dev server (`npm run dev`) does not hydrate
+reliably in the Pi's Chromium: the page renders but no client JavaScript takes
+over, so the clock sticks at `--:--`, the messages stop cycling, and the board
+never polls for new data. It looks like a frozen screenshot. Production hydrates
+correctly. If you test against a laptop before the host exists, run
+`./scripts/build-standalone.sh` and serve that, not `npm run dev`.
+
 ## What breaks, and what happens
 
 | Failure | Result |

@@ -64,14 +64,25 @@ export type NowSlot = Slot & {
   progress: number;
 };
 
-const parts = new Intl.DateTimeFormat("en-GB", {
-  timeZone: TIMEZONE,
-  weekday: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-  hour12: false,
-});
+// Never allowed to throw at module load: this runs client-side (via the lesson
+// marker), and a Chromium without the full timezone database raises on an
+// explicit `timeZone`. An uncaught throw here would crash the board's
+// hydration. The device clock is already in this zone, so local time is the
+// correct fallback.
+const parts = (() => {
+  const opts: Intl.DateTimeFormatOptions = {
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  };
+  try {
+    return new Intl.DateTimeFormat("en-GB", { timeZone: TIMEZONE, ...opts });
+  } catch {
+    return new Intl.DateTimeFormat("en-GB", opts);
+  }
+})();
 
 const WEEKDAY_INDEX: Record<string, number> = {
   Sun: 0,
