@@ -209,7 +209,7 @@ export function SubstitutionBoard({
                           {row.substitute ? (
                             row.substitute
                           ) : (
-                            <span className="inline-block rounded-sm bg-alert-bg px-[0.45em] py-[0.2em] text-[0.78em] font-bold text-alert">
+                            <span className="inline-block rounded-sm bg-accent/15 px-[0.45em] py-[0.2em] text-[0.78em] font-bold text-accent">
                               Info volgt
                             </span>
                           )}
