@@ -86,28 +86,31 @@ function NowPeriod({ label, progress }: { label: string; progress: number }) {
   );
 }
 
-/**
- * How many substitution rows fit at full size. Beyond that the rows shrink
- * together rather than colliding — a board nobody can read is worse than a
- * board in smaller type, and busy days are the ones people most need to read.
- */
-const COMFORTABLE_ROWS = 7;
 const MIN_SCALE = 0.55;
 
-function rowScale(rowCount: number): number {
-  if (rowCount <= COMFORTABLE_ROWS) return 1;
-  return Math.max(MIN_SCALE, COMFORTABLE_ROWS / rowCount);
+/**
+ * `comfortable` rows fit at full size; beyond that the rows shrink together
+ * rather than colliding — a board nobody can read is worse than one in smaller
+ * type, and busy days are the ones people most need to read. The comfortable
+ * count is higher in the busy-day layout, where the board owns the full height.
+ */
+function rowScale(rowCount: number, comfortable: number): number {
+  if (rowCount <= comfortable) return 1;
+  return Math.max(MIN_SCALE, comfortable / rowCount);
 }
 
 export function SubstitutionBoard({
   substitutions,
   breakAfterPeriod,
   unavailable = false,
+  comfortableRows = 7,
 }: {
   substitutions: Substitution[];
   breakAfterPeriod: number | null;
   /** The sheet couldn't be read — say so rather than implying a quiet day. */
   unavailable?: boolean;
+  /** Rows that fit at full size before the table scales down. */
+  comfortableRows?: number;
 }) {
   const groups = groupByPeriod(substitutions);
   const slot = useCurrentSlot();
@@ -149,7 +152,9 @@ export function SubstitutionBoard({
         <div
           className="flex min-h-0 flex-1 flex-col px-[0.7rem]"
           // Row type is sized in em off this, so a busy day scales down as one.
-          style={{ fontSize: `${rowScale(substitutions.length)}rem` }}
+          style={{
+            fontSize: `${rowScale(substitutions.length, comfortableRows)}rem`,
+          }}
         >
           {groups.map((group, index) => {
             const showPauze =

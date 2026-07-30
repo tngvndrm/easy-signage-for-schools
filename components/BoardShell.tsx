@@ -25,6 +25,15 @@ const POLL_MS = 30_000;
 const INTERRUPT_EVERY_MS = 3 * 60_000;
 const KEY_PANEL_FOR_MS = 20_000;
 const EVENT_POSTER_FOR_MS = 25_000;
+
+/**
+ * Above this many substitutions the dashboard reflows: the board takes a
+ * full-height left column and the message + birthday zones stack on the right,
+ * so a busy day's rows stay readable instead of shrinking.
+ */
+const SUBS_WIDE_THRESHOLD = 8;
+/** Rows that fit at full size once the board owns the full height. */
+const WIDE_COMFORTABLE_ROWS = 9;
 /** After this long without a successful poll, tell the room the data is old. */
 const STALE_MS = 5 * 60_000;
 const CACHE_KEY = "infoborden:board";
@@ -106,6 +115,14 @@ export function BoardShell({
   const showKeys =
     (showing === "keys" || forceKeyPanel) && data.keys.length > 0;
   const showEvent = (showing === "event" || forceEvent) && event !== null;
+
+  // Past this many substitutions the top-65%-tall board gets cramped, so the
+  // layout reflows to give it the full height (see the two return branches).
+  // Never while the key panel is interrupting — that owns the full main area.
+  const wideSubs =
+    !showKeys &&
+    !data.substitutionsUnavailable &&
+    data.substitutions.length > SUBS_WIDE_THRESHOLD;
 
   const poll = useCallback(async () => {
     try {
@@ -207,25 +224,53 @@ export function BoardShell({
         </div>
       </header>
 
-      {showKeys ? (
-        <KeyPanel duties={data.keys} />
+      {wideSubs ? (
+        /*
+         * Busy day: the board takes a full-height left column so its rows stay
+         * large instead of shrinking, and the message and birthday zones stack
+         * in a column on the right.
+         */
+        <div className="flex min-h-0 flex-1 gap-[1rem]">
+          <SubstitutionBoard
+            substitutions={data.substitutions}
+            breakAfterPeriod={data.breakAfterPeriod}
+            unavailable={data.substitutionsUnavailable}
+            comfortableRows={WIDE_COMFORTABLE_ROWS}
+          />
+          <div className="flex w-[28%] shrink-0 flex-col gap-[1rem]">
+            <MessageLoop
+              messages={data.messages}
+              keyDuties={manyKeys ? [] : data.keys}
+            />
+            <BirthdayZone
+              birthdays={data.birthdays}
+              className="w-full shrink-0"
+            />
+          </div>
+        </div>
       ) : (
-        <SubstitutionBoard
-          substitutions={data.substitutions}
-          breakAfterPeriod={data.breakAfterPeriod}
-          unavailable={data.substitutionsUnavailable}
-        />
-      )}
+        <>
+          {showKeys ? (
+            <KeyPanel duties={data.keys} />
+          ) : (
+            <SubstitutionBoard
+              substitutions={data.substitutions}
+              breakAfterPeriod={data.breakAfterPeriod}
+              unavailable={data.substitutionsUnavailable}
+            />
+          )}
 
-      <div className="flex h-[12rem] shrink-0 gap-[1rem]">
-        <MessageLoop
-          messages={data.messages}
-          // Only once the list is short enough to read here; while it's long
-          // the main-area panel carries it instead.
-          keyDuties={manyKeys ? [] : data.keys}
-        />
-        <BirthdayZone birthdays={data.birthdays} />
-      </div>
+          <div className="flex h-[12rem] shrink-0 gap-[1rem]">
+            <MessageLoop
+              messages={data.messages}
+              // Only once the list is short enough to read here; while it's long
+              // the main-area panel carries it instead.
+              keyDuties={manyKeys ? [] : data.keys}
+            />
+            <BirthdayZone birthdays={data.birthdays} />
+          </div>
+        </>
+      )}
     </main>
   );
 }
