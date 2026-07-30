@@ -39,6 +39,13 @@ export const demoMessages: BoardMessage[] = [
     title: "Donderdag 20u — Toneel",
     body: "Klas 100 speelt ‘Een Midzomernachtsdroom’ in de aula. Iedereen welkom!",
   },
+  {
+    id: "fundraiser",
+    title: "Wafelverkoop 6A",
+    body: "Steun de bosklassen — vrijdag aan de schoolpoort, €1 per wafel.",
+    imageUrl: "/demo-fundraiser.svg",
+    cover: true,
+  },
 ];
 
 export const demoBirthdays: Birthday[] = [

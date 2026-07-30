@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <title>Demo fundraiser artwork</title>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#51a3c4" />
+      <stop offset="1" stop-color="#dcedf3" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky)" />
+  <!-- rolling hills -->
+  <path d="M0 420 C 160 360 300 470 460 410 S 700 360 800 400 V600 H0 Z" fill="#d99a22" opacity="0.9" />
+  <path d="M0 500 C 200 440 360 540 520 470 S 720 450 800 480 V600 H0 Z" fill="#986c18" opacity="0.9" />
+  <!-- sun -->
+  <circle cx="150" cy="150" r="70" fill="#f7ebd3" />
+  <!-- bunting -->
+  <path d="M0 70 Q 400 150 800 70" stroke="#ec674a" stroke-width="4" fill="none" />
+  <g fill="#ec674a">
+    <path d="M120 92 l26 6 -20 20 z" />
+    <path d="M300 122 l26 4 -18 22 z" />
+    <path d="M500 122 l26 -4 -8 26 z" />
+    <path d="M680 92 l26 -8 -2 28 z" />
+  </g>
+  <g fill="#fbe1db">
+    <path d="M210 110 l26 5 -19 21 z" />
+    <path d="M400 132 l26 0 -13 24 z" />
+    <path d="M590 110 l26 -6 -5 27 z" />
+  </g>
+  <!-- big heart (community / giving) -->
+  <path d="M400 380 c -60 -70 -150 -20 -150 45 c 0 70 100 120 150 155 c 50 -35 150 -85 150 -155 c 0 -65 -90 -115 -150 -45 z" fill="#ec674a" />
+</svg>

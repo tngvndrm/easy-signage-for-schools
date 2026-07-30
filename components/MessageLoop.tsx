@@ -107,84 +107,133 @@ export function MessageLoop({
     );
   }
 
+  const message = current.kind === "message" ? current.message : null;
+  // Full-bleed artwork mode: image fills the card, text and header sit over it.
+  const cover = !!(message?.cover && message.imageUrl);
+
   return (
-    <section className="group relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-[0.075rem] border-line bg-surface-1 p-[1.4rem]">
-      {/* HEADER_ROW: fixed height so the birthday card's label lines up. */}
-      <div className="mb-[0.6rem] flex h-[1.7rem] shrink-0 items-center justify-between">
-        <span className="eyebrow text-[0.8rem]">Mededelingen</span>
+    <section
+      className={`group relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-[0.075rem] ${
+        cover ? "border-transparent" : "border-line bg-surface-1"
+      }`}
+    >
+      {cover && message && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={message.imageUrl}
+            alt=""
+            className="animate-fade-up absolute inset-0 h-full w-full object-cover"
+          />
+          {/* Scrim: darker top and bottom so the header and the words stay
+              legible over any artwork, brightest through the middle. */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/85" />
+        </>
+      )}
 
-        {interactive && (
-          /*
-           * Skip controls live up here rather than over the message, so they
-           * can never sit on top of the words. They reserve their space
-           * always and only fade in on hover — nothing in a corridor hovers,
-           * so the wall screens show dots and a counter exactly as before,
-           * and nothing shifts when a cursor arrives.
-           */
-          <div className="flex items-center gap-[0.5rem]">
-            <SkipButton direction="prev" onClick={() => go(safeIndex - 1)} />
-            <div className="flex items-center gap-[0.35rem]">
-              {slides.map((slide, i) => (
-                <button
-                  key={slide.id}
-                  type="button"
-                  onClick={() => go(i)}
-                  aria-label={`Mededeling ${i + 1}`}
-                  aria-current={i === safeIndex}
-                  className={`h-[0.35rem] rounded-full transition-all duration-500 ${
-                    i === safeIndex
-                      ? "w-[1.7rem] bg-accent"
-                      : "w-[0.35rem] bg-line"
-                  }`}
-                />
-              ))}
-            </div>
-            <SkipButton direction="next" onClick={() => go(safeIndex + 1)} />
-            <span className="eyebrow pl-[0.2rem] text-[0.75rem]">
-              {safeIndex + 1} van {count}
-            </span>
-          </div>
-        )}
-      </div>
+      <div className="relative flex min-h-0 flex-1 flex-col p-[1.4rem]">
+        {/* HEADER_ROW: fixed height so the birthday card's label lines up. */}
+        <div className="mb-[0.6rem] flex h-[1.7rem] shrink-0 items-center justify-between">
+          <span
+            className={`eyebrow text-[0.8rem] ${cover ? "text-white/85" : ""}`}
+          >
+            Mededelingen
+          </span>
 
-      <div
-        key={current.id}
-        className="animate-fade-up flex min-h-0 flex-1 items-center gap-[1.2rem]"
-      >
-        {current.kind === "keys" ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-[0.5rem]">
-            <h3 className="flex items-center gap-[0.5rem] font-display text-[1.55rem] font-bold leading-tight text-accent">
-              <KeyIcon className="h-[1.5rem] w-[1.5rem] shrink-0" />
-              {keyHeadline(keyDuties)}
-            </h3>
-            <div className="flex flex-wrap gap-[0.5rem]">
-              {keyDuties.map((duty) => (
-                <KeyChip key={duty.id} duty={duty} compact />
-              ))}
+          {interactive && (
+            /*
+             * Skip controls live up here rather than over the message, so they
+             * can never sit on top of the words. They reserve their space
+             * always and only fade in on hover — nothing in a corridor hovers,
+             * so the wall screens show dots and a counter exactly as before,
+             * and nothing shifts when a cursor arrives.
+             */
+            <div className="flex items-center gap-[0.5rem]">
+              <SkipButton direction="prev" onClick={() => go(safeIndex - 1)} />
+              <div className="flex items-center gap-[0.35rem]">
+                {slides.map((slide, i) => (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    onClick={() => go(i)}
+                    aria-label={`Mededeling ${i + 1}`}
+                    aria-current={i === safeIndex}
+                    className={`h-[0.35rem] rounded-full transition-all duration-500 ${
+                      i === safeIndex
+                        ? cover
+                          ? "w-[1.7rem] bg-white"
+                          : "w-[1.7rem] bg-accent"
+                        : cover
+                          ? "w-[0.35rem] bg-white/40"
+                          : "w-[0.35rem] bg-line"
+                    }`}
+                  />
+                ))}
+              </div>
+              <SkipButton direction="next" onClick={() => go(safeIndex + 1)} />
+              <span
+                className={`eyebrow pl-[0.2rem] text-[0.75rem] ${
+                  cover ? "text-white/75" : ""
+                }`}
+              >
+                {safeIndex + 1} van {count}
+              </span>
             </div>
-          </div>
-        ) : (
-          <>
-            {current.message.imageUrl && (
-              // Plain <img>: the banner comes from Cloud Storage and the kiosk
-              // needs no optimisation pipeline for one image on screen.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={current.message.imageUrl}
-                alt=""
-                className="h-full w-auto max-w-[38%] rounded-md object-cover"
-              />
-            )}
-            <div className="min-w-0">
-              <h3 className="font-display text-[1.7rem] font-bold leading-tight text-accent">
-                {current.message.title}
+          )}
+        </div>
+
+        <div
+          key={current.id}
+          className={`animate-fade-up flex min-h-0 flex-1 gap-[1.2rem] ${
+            cover ? "items-end" : "items-center"
+          }`}
+        >
+          {current.kind === "keys" ? (
+            <div className="flex min-w-0 flex-1 flex-col gap-[0.5rem]">
+              <h3 className="flex items-center gap-[0.5rem] font-display text-[1.55rem] font-bold leading-tight text-accent">
+                <KeyIcon className="h-[1.5rem] w-[1.5rem] shrink-0" />
+                {keyHeadline(keyDuties)}
               </h3>
-              <p className="pt-[0.3rem] text-[1.4rem] leading-[1.3]">
-                {current.message.body}
+              <div className="flex flex-wrap gap-[0.5rem]">
+                {keyDuties.map((duty) => (
+                  <KeyChip key={duty.id} duty={duty} compact />
+                ))}
+              </div>
+            </div>
+          ) : cover && message ? (
+            <div className="min-w-0">
+              <h3 className="font-display text-[1.8rem] font-bold leading-tight text-white">
+                {message.title}
+              </h3>
+              <p className="pt-[0.3rem] text-[1.4rem] leading-[1.3] text-white/95">
+                {message.body}
               </p>
             </div>
-          </>
-        )}
+          ) : (
+            message && (
+              <>
+                {message.imageUrl && (
+                  // Plain <img>: the banner comes from Cloud Storage and the
+                  // kiosk needs no optimisation pipeline for one image on screen.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={message.imageUrl}
+                    alt=""
+                    className="h-full w-auto max-w-[38%] rounded-md object-cover"
+                  />
+                )}
+                <div className="min-w-0">
+                  <h3 className="font-display text-[1.7rem] font-bold leading-tight text-accent">
+                    {message.title}
+                  </h3>
+                  <p className="pt-[0.3rem] text-[1.4rem] leading-[1.3]">
+                    {message.body}
+                  </p>
+                </div>
+              </>
+            )
+          )}
+        </div>
       </div>
     </section>
   );

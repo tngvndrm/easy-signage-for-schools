@@ -22,6 +22,12 @@ export type BoardMessage = {
   body: string;
   /** Optional banner image (Cloud Storage URL). */
   imageUrl?: string;
+  /**
+   * Full-bleed artwork: the image fills the whole card and the text sits over
+   * it on a scrim, instead of the image being a side thumbnail. For fundraiser
+   * posters and the like.
+   */
+  cover?: boolean;
   /** Seconds this item stays on screen in the rotation. */
   durationSec?: number;
 };
