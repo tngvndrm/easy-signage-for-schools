@@ -216,7 +216,7 @@ export function SubstitutionBoard({
                         </span>
                         {row.content &&
                           (isShortTask(row.content) ? (
-                            <span className="shrink-0 rounded-sm bg-surface-2 px-[0.55em] py-[0.18em] text-[0.82em] font-bold leading-none text-calm">
+                            <span className="shrink-0 rounded-sm bg-accent/15 px-[0.6em] py-[0.26em] text-[0.98em] font-bold leading-none text-accent">
                               {row.content}
                             </span>
                           ) : (
@@ -225,7 +225,7 @@ export function SubstitutionBoard({
                             </span>
                           ))}
                       </div>
-                      <span className="truncate text-right font-display text-[1.65em] font-bold leading-none text-calm">
+                      <span className="truncate text-right font-display text-[1.65em] font-bold leading-none text-accent">
                         {row.lokaal || "—"}
                       </span>
                     </div>
