@@ -47,10 +47,13 @@ type Slide =
 export function MessageLoop({
   messages,
   keyDuties = [],
+  tall = false,
 }: {
   messages: BoardMessage[];
   /** Only passed once the list is short enough for this zone; see BoardShell. */
   keyDuties?: KeyDuty[];
+  /** Narrow, full-height card (busy-day right column) — lay images out on top. */
+  tall?: boolean;
 }) {
   const [index, setIndex] = useState(0);
   // Bumped on every interaction so the dwell timer restarts from full.
@@ -110,6 +113,12 @@ export function MessageLoop({
   const message = current.kind === "message" ? current.message : null;
   // Full-bleed artwork mode: image fills the card, text and header sit over it.
   const cover = !!(message?.cover && message.imageUrl);
+  // A non-cover image: a side thumbnail normally, stacked on top in the tall card.
+  const topImage = !!(message?.imageUrl && !cover && tall);
+  // Header sits over artwork in cover mode; give it a scrim-proof shadow.
+  const coverText = cover
+    ? "text-white [text-shadow:0_0.08rem_0.25rem_rgba(0,0,0,0.7)]"
+    : "";
 
   return (
     <section
@@ -125,18 +134,17 @@ export function MessageLoop({
             alt=""
             className="animate-fade-up absolute inset-0 h-full w-full object-cover"
           />
-          {/* Scrim: darker top and bottom so the header and the words stay
-              legible over any artwork, brightest through the middle. */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/85" />
+          {/* Scrim: a strong band top and bottom so the header row and the
+              words stay legible over any artwork, clearest through the middle. */}
+          <div className="absolute inset-x-0 top-0 h-[5rem] bg-gradient-to-b from-black/85 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-[70%] bg-gradient-to-t from-black/85 to-transparent" />
         </>
       )}
 
       <div className="relative flex min-h-0 flex-1 flex-col p-[1.4rem]">
         {/* HEADER_ROW: fixed height so the birthday card's label lines up. */}
         <div className="mb-[0.6rem] flex h-[1.7rem] shrink-0 items-center justify-between">
-          <span
-            className={`eyebrow text-[0.8rem] ${cover ? "text-white/85" : ""}`}
-          >
+          <span className={`eyebrow text-[0.8rem] ${coverText}`}>
             Mededelingen
           </span>
 
@@ -171,11 +179,7 @@ export function MessageLoop({
                 ))}
               </div>
               <SkipButton direction="next" onClick={() => go(safeIndex + 1)} />
-              <span
-                className={`eyebrow pl-[0.2rem] text-[0.75rem] ${
-                  cover ? "text-white/75" : ""
-                }`}
-              >
+              <span className={`eyebrow pl-[0.2rem] text-[0.75rem] ${coverText}`}>
                 {safeIndex + 1} van {count}
               </span>
             </div>
@@ -185,7 +189,11 @@ export function MessageLoop({
         <div
           key={current.id}
           className={`animate-fade-up flex min-h-0 flex-1 gap-[1.2rem] ${
-            cover ? "items-end" : "items-center"
+            cover
+              ? "items-end"
+              : topImage
+                ? "flex-col"
+                : "items-center"
           }`}
         >
           {current.kind === "keys" ? (
@@ -215,14 +223,20 @@ export function MessageLoop({
                 {message.imageUrl && (
                   // Plain <img>: the banner comes from Cloud Storage and the
                   // kiosk needs no optimisation pipeline for one image on screen.
+                  // In the tall card it caps its height and spans the width on
+                  // top; in the wide card it's a side thumbnail.
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={message.imageUrl}
                     alt=""
-                    className="h-full w-auto max-w-[38%] rounded-md object-cover"
+                    className={
+                      topImage
+                        ? "max-h-[42%] w-full shrink-0 rounded-md object-cover"
+                        : "h-full w-auto max-w-[38%] rounded-md object-cover"
+                    }
                   />
                 )}
-                <div className="min-w-0">
+                <div className="min-h-0 min-w-0">
                   <h3 className="font-display text-[1.7rem] font-bold leading-tight text-accent">
                     {message.title}
                   </h3>

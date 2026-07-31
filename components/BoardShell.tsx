@@ -241,6 +241,7 @@ export function BoardShell({
             <MessageLoop
               messages={data.messages}
               keyDuties={manyKeys ? [] : data.keys}
+              tall
             />
             <BirthdayZone
               birthdays={data.birthdays}
