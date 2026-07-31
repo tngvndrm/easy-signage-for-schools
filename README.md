@@ -1,46 +1,63 @@
-# Signage — Infoborden
+# Easy Signage for Schools — Infoborden
 
 Frontend display for the school info boards described in [SPEC.md](SPEC.md).
-Replaces PiSignage: a fixed dashboard (substitutions + messages + birthdays),
-not a slideshow.
+Replaces PiSignage: a fixed dashboard — substitutions, messages, birthdays,
+classroom keys, events — not a slideshow.
+
+**All of it is driven by one Google Sheet.** Each feature reads its own tab, so
+staff maintain everything in a tool they already know and there is no admin UI,
+database or login to build or run.
 
 ## Stack
 
 | Layer | Choice | Why |
 | --- | --- | --- |
-| App | **Next.js 16 (App Router) + TypeScript** | Board pages, admin UI and the JSON API live in one deployable. One `npm run build`, one container. |
+| App | **Next.js 16 (App Router) + TypeScript** | The board pages and the JSON API in one deployable. One `npm run build`. |
 | Styling | **Tailwind CSS v4 + Steinerschool Gent tokens** | Brand colours, Averia typeface and the organic radii live as CSS variables in `app/globals.css`. |
-| Substitutions | **Google Sheets API v4** (read-only, service account) | Staff keep editing a sheet they already know. No data-entry UI to build. |
-| Admin data | **Firestore** (not wired yet) | Messages, birthdays, takeovers — tiny documents, serverless. |
-| Images | **Cloud Storage** (not wired yet) | Banner uploads for messages/takeovers. |
-| Auth | **Google OAuth + Group check** (not wired yet) | Gates `/admin` only; the board pages stay public on the school LAN. |
-| Hosting | **Cloud Run** | Scales to zero, no host to patch, same Google project as the Sheet. |
+| Data | **Google Sheets API v4** (read-only, service account) | One sheet, one tab per feature. Staff edit a sheet they already know; nothing to run. |
+| Images | **Google Drive links** | Posters/artwork are Drive share links, rewritten to direct images by the reader. No upload pipeline. |
+| Hosting | **One LAN host** (small Pi, Next standalone under systemd) | Kept on the school network so student names never leave the building. See [`docs/deploy-lan.md`](docs/deploy-lan.md). |
+| Screens | **Raspberry Pi + cage** kiosk | Pi OS Lite boots straight into one full-screen Chromium. No desktop. |
 
 Deliberately *not* used: no state manager, no component library, no CMS, no
-WebSocket layer. Three screens polling a JSON endpoint every 30s is well inside
-what a single small container handles.
+database, no WebSocket layer. Three screens polling a JSON endpoint every 30s is
+well inside what one small host handles.
 
 ## What's built
 
-- `/screen/1`, `/screen/2`, `/screen/3` — the board. Identical content per the
-  spec; the screen number only shows in the status bar.
-- `/screen/1?takeover=1` — preview of full-screen takeover mode.
-- `/screen/1?keypanel=1` — preview of the classroom-key panel.
-- `/api/board` — the single JSON payload the board polls.
-- `/` — index with links to each screen.
+Everything in the spec, all reading from the sheet:
 
-Substitutions currently render from `lib/demo-data.ts`. Set `SHEET_ID` and the
-same code path reads the real sheet — the demo badge in the header disappears
-once it does.
+- `/screen/1`, `/screen/2`, `/screen/3` — the board. Identical content; the
+  screen number only shows in the status bar.
+- `/api/board` — the single JSON payload the board polls.
+- `/` — index with links to each screen and to every preview below.
+
+Substitutions, messages, birthdays, classroom keys, events and full-screen Big
+Slide takeovers all come from their sheet tabs. With `SHEET_ID` unset the board
+runs on `lib/demo-data.ts` and shows a **Demo-data** badge; set it and the badge
+disappears.
+
+**Previews** (also linked from `/`), appended to a screen URL:
+
+| Query | Shows |
+| --- | --- |
+| `?now=11:20` (or `?now=wed+12:45`) | the "now" marker frozen at a chosen time |
+| `?date=2026-09-02` | the board for another school day |
+| `?theme=dark`, `?accent=blue`/`gold` | theme / accent overrides |
+| `?keypanel=1`, `?keys=3` | the classroom-key panel / the in-rotation key card |
+| `?event=1` | the event poster (sample if none scheduled) |
+| `?takeover=1` | a Big Slide full-screen takeover (sample) |
 
 ### Look & feel
 
 The board is built on the **Steinerschool Gent brand & style guide**:
 
 - **Colour** — Coral `#EC674A`, Gold `#D99A22`, Blue `#51A3C4` with the guide's
-  100/300/500/700/900 ramps, on warm neutrals. On the board they carry meaning:
-  accent for lesson periods and headings, coral for "Geen les", blue for
-  classrooms, gold for the birthday card.
+  100/300/500/700/900 ramps, on warm neutrals. The **accent** (coral by default)
+  carries the substitution row — lesson periods, the task pill, the room and the
+  **Info volgt** chip — plus headings; **gold** owns the birthday card. All three
+  appear in the logo mark. Switch the accent to gold or blue and every accented
+  element follows.
 - **Type** — Averia Sans Libre for display, headings, periods and the clock;
   system sans for body copy; monospace eyebrows for column labels. The font is
   self-hosted at build time (`next/font`), so a flaky line can't strip the
@@ -49,8 +66,8 @@ The board is built on the **Steinerschool Gent brand & style guide**:
   guide's irregular hand-made radius is reserved for the large surfaces — the
   header and the big panels — where it reads as deliberate; small chips and row
   shading get a plain even radius, since repeating the asymmetry at that scale
-  turned into noise and fought the data. The birthday and takeover cards carry
-  the off-kilter blob from the feature-card pattern.
+  turned into noise and fought the data. The birthday card and the text-only Big
+  Slide carry the off-kilter blob from the feature-card pattern.
 
 Both are settings, not media queries — a kiosk has nobody to prefer anything:
 
@@ -166,6 +183,12 @@ up and takes itself down instead of someone remembering to delete it.
   - `Permanent` — held full-screen for the whole `Van`–`Tot` window, hiding the
     dashboard. For "welcome back" / holiday messages where nothing else matters.
     Several at once rotate.
+  (Reads `Yes`/`Ja` and `Permanent`/`Vast` loosely; a data-validation dropdown
+  keeps it tidy.)
+
+Keep card text short: a card clamps an over-long body with an ellipsis. Long
+content belongs on a Big Slide, where a text-only slide left-aligns past a
+threshold instead of sprawling in the centre.
 
 ### Events and posters
 
@@ -192,11 +215,12 @@ Preview with `?event=1`, which falls back to a sample when nothing is scheduled.
 
 ### One interruption at a time
 
-The key panel and the event poster share a single rotation rather than running
-their own timers — two timers would eventually fire together and fight over the
-screen. Every 3 minutes the board shows the next one due and then returns to the
-dashboard. An admin takeover outranks both, since it was scheduled for that
-exact day on purpose.
+The key panel, the event poster and periodic (`Yes`) Big Slides share a single
+rotation rather than running their own timers — independent timers would
+eventually fire together and fight over the screen. Every 3 minutes the board
+shows the next one due, then returns to the dashboard. A `Permanent` Big Slide
+outranks all of them: it holds the whole screen for its window, since it was set
+for exactly those days on purpose.
 
 ### Birthdays
 
@@ -249,32 +273,31 @@ Then open http://localhost:3000. Without `SHEET_ID` it serves demo data.
 
 ## Wiring the Google Sheet
 
-The target sheet is **"Signage - Vervangingen (voorbeeld)"**, id
-`1De7Mx1SSBxRVgWXnzKKB9obKvw5EhGM0QaUrz5tM5v4`. `.env.local` is already filled
-in for it, with `SHEET_ID` commented out until credentials exist — setting it
-switches the board off demo data, and without a key every read fails.
-
-Three steps, all needing a Google account this repo doesn't have:
+The board reads one spreadsheet (id in `.env.local`). One-time setup, each step
+needing a Google account:
 
 1. In a Google Cloud project, enable the **Google Sheets API**, create a
    **service account**, and download a JSON key as `service-account.json` here
-   (gitignored). Set `GOOGLE_APPLICATION_CREDENTIALS=./service-account.json`.
-   On Cloud Run, attach the service account to the revision instead — no key
-   file to store.
+   (gitignored). Set `GOOGLE_APPLICATION_CREDENTIALS=./service-account.json`
+   (use an **absolute** path on the LAN host — see the deploy guide).
 2. Share the sheet with that service account's email address as **Viewer**.
-3. Add the optional tabs — **`Sleutels`** (keys), **`Verjaardagen`** (birthdays), **`Mededelingen`** (messages) and **`Evenementen`** (events) —
-   until each exists its feature simply stays dormant, the rest of the board is
-   unaffected:
+3. Set `SHEET_ID` in `.env.local`. `npm run check:sheet` verifies each step and
+   prints the service-account address to share with.
 
-   ```
-   Klas	Leerling	Ophalen	Opgehaald	Terugbrengen	Teruggebracht
-   Titel	Tekst	Van	Tot	Afbeelding	Volledig beeld
-   Datum	Tijd	Toon vanaf	Klas	Titel	Synopsis	Poster
-   Voornaam	Naam	Klas	Datum
-   ```
+Each feature reads its own tab; until a tab exists that feature simply stays
+dormant and the rest of the board is unaffected. The header rows:
 
-Then uncomment `SHEET_ID` in `.env.local`. `npm run check:sheet` verifies each
-step and prints the service-account address to share with.
+| Tab | Header |
+| --- | --- |
+| `Vervangingen` | `Datum · Lesuur · Klas · Afwezige Leerkracht · Vervanging · Inhoud · Lokaal` |
+| `Mededelingen` | `Titel · Tekst · Van · Tot · Afbeelding · Volledig beeld · Big Slide` |
+| `Evenementen` | `Datum · Tijd · Toon vanaf · Klas · Titel · Synopsis · Poster` |
+| `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
+| `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
+
+Importable CSV starting points for every tab are in
+[`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,
+one per tab, keeping the tab names above. Ranges are set in `.env.example`.
 
 Append `?date=2026-09-02` to a screen URL (or `/api/board`) to render another
 school day — useful for checking entries before the day arrives.
@@ -286,56 +309,44 @@ uniform:
 
 - The header row is **found**, not assumed to be row 1 — a title line or a blank
   spacer above the table doesn't blank the board.
-- Unknown columns are ignored, so the sheet's extra `Inhoud` column costs
-  nothing. (It isn't displayed — see "Not built yet".)
-- A missing tab is treated as a normal dormant state, not a failure.
+- Header names are matched case/accent-insensitively with aliases
+  (`Lesuur`/`Uur`, `Vervanging`/`Vervanger`, …); column order doesn't matter and
+  unknown columns are ignored.
+- Dates read several forms: `27/07/2026`, `27/7/2026`, `2026-07-27`.
+- A missing tab is a normal dormant state, not a failure.
 - A read that genuinely fails shows **"Rooster tijdelijk niet beschikbaar"**,
   never a blank board — an empty list must never be able to mean a broken one.
 
-Importable starting points for both tabs are in
-[`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,
-one CSV per tab, keeping the tab names `Vervangingen` and `Sleutels`.
+### Substitution specifics (`Vervangingen`)
 
-### Sheet format
-
-Header row, then one row per (period, class, absence):
-
-| Datum | Lesuur | Klas | Afwezige Leerkracht | Vervanging | Lokaal |
-| --- | --- | --- | --- | --- | --- |
-| 27/07/2026 | 1-2 | 7A | Mevr. De Smet | Dhr. Peeters | A12 |
-| 27/07/2026 | 6 | 9A | Mevr. De Smet | Dhr. Peeters | C21 |
-| 27/07/2026 | 6 | 9C | Dhr. Janssens | Mevr. Goossens | C22 |
-
-The reader is deliberately forgiving, so open question 1 in the spec doesn't
-have to be settled before staff start using it:
-
-- Header names are matched case/accent-insensitively with aliases
-  (`Lesuur`/`Uur`, `Vervanging`/`Vervanger`, …).
-- A blank `Lesuur` or `Datum` inherits the row above, so a sheet that still uses
-  merged cells keeps working. Filling every row is still recommended.
-- `1-2`, `1 & 2`, `1 en 2` all render as **1 & 2**.
+- Only rows whose `Datum` is today are shown, sorted by period.
+- `1-2`, `1 & 2`, `1 en 2` all render as **1 & 2**, marked live through both.
+- A blank `Lesuur` or `Datum` inherits the row above, so merged cells keep
+  working — filling every row is still recommended.
 - A literal `pauze` row is ignored — the board draws the divider itself from
   `BREAK_AFTER_PERIOD`.
-- An empty `Vervanging` renders as a red **Geen les** chip.
-- Rows whose `Datum` isn't today are skipped.
+- `Inhoud` (the substitution task) shows beside the substitute: short values
+  like `Zelfstudie` as a pill, longer ones as text; `nvt`/`-` show nothing.
+- An empty `Vervanging` renders as an **Info volgt** chip — never "no class", so
+  students don't leave thinking a lesson was cancelled when the row is just
+  unfinished.
+
+## Deploying
+
+Kept on the school LAN — one small host serves all three screens and nothing is
+exposed to the internet. Full runbook, including the cage kiosk setup for the
+display Pis, in **[`docs/deploy-lan.md`](docs/deploy-lan.md)**.
+
+The screens must load the **production** build (`./scripts/build-standalone.sh`
+or `npm run start`), never `npm run dev` — dev-mode hydration doesn't run
+reliably in the Pi's Chromium.
 
 ## Not built yet
 
-Roughly in the order I'd tackle them:
-
-0. **The sheet's `Inhoud` column** — the live sheet carries a 7th column
-   (`Vervangtaak`, `Spel`, `Zelfstudie`) that the board reads past but doesn't
-   show. It's arguably the most actionable thing on a row after the room, but
-   adding it means re-proportioning the five existing columns, so it's a
-   decision rather than an oversight.
-1. **Firestore + admin UI** — messages, birthdays, takeovers currently come from
-   `lib/demo-data.ts`. `lib/board.ts` has the seam marked with a `TODO`; the
-   board and its types need no changes.
-2. **Google OAuth + group check** on `/admin`.
-3. **Cloud Run deploy** — `output: "standalone"` is already set; needs a
-   Dockerfile and a service account with Sheets + Firestore access.
-4. **Service worker** so a Pi that boots while the network is down still paints
-   the last board instead of Chromium's error page. (`localStorage` only helps
-   once the page itself has loaded.)
-5. **Pi kiosk script** — Chromium autostart, screen-blanking off, nightly
-   reboot.
+- **Offline cold boot.** A screen that boots while the host is down gets
+  Chromium's error page; `localStorage` only rescues a page that has loaded at
+  least once. A service worker would cache the shell and last board. This is the
+  one gap worth closing before relying on the screens daily.
+- **TV on/off scheduling** (HDMI-CEC) — tracked separately.
+- **OneRoster birthdays** — deferred in the spec; moot now that the birthday
+  list lives in the sheet.
