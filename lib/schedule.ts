@@ -1,10 +1,11 @@
 /**
  * The school day, in minutes since midnight (Europe/Brussels).
  *
- * Monday to Friday run the full table below; Wednesday stops after period 4, so
- * the afternoon slots — and the middagpauze that would precede them — are
- * dropped for that day. Outside these windows the board shows no "now" marker
- * at all: before 08:50, after the last bell, and all weekend.
+ * The schedule can come from the sheet's `Rooster` tab; the table below is the
+ * fallback used when that tab is absent. Monday to Friday run the full day;
+ * Wednesday stops after `SHORT_DAY_LAST_PERIOD`, so its afternoon slots — and
+ * the break that would precede them — are dropped. Outside these windows the
+ * board shows no "now" marker: before the first bell, after the last, weekends.
  */
 
 const TIMEZONE = "Europe/Brussels";
@@ -25,36 +26,21 @@ export type Slot =
       afterPeriod: number;
       start: number;
       end: number;
+      /** Draw a divider line for this break on the substitution board. */
+      line: boolean;
     };
 
-export const SCHEDULE: Slot[] = [
+/** Fallback schedule when there's no `Rooster` tab (Steinerschool Gent). */
+export const DEFAULT_SCHEDULE: Slot[] = [
   { kind: "lesson", period: 1, start: hm(8, 50), end: hm(9, 40) },
   { kind: "lesson", period: 2, start: hm(9, 40), end: hm(10, 30) },
-  {
-    kind: "break",
-    label: "kleine pauze",
-    afterPeriod: 2,
-    start: hm(10, 30),
-    end: hm(10, 50),
-  },
+  { kind: "break", label: "kleine pauze", afterPeriod: 2, start: hm(10, 30), end: hm(10, 50), line: false },
   { kind: "lesson", period: 3, start: hm(10, 50), end: hm(11, 40) },
   { kind: "lesson", period: 4, start: hm(11, 40), end: hm(12, 30) },
-  {
-    kind: "break",
-    label: "middagpauze",
-    afterPeriod: 4,
-    start: hm(12, 30),
-    end: hm(13, 20),
-  },
+  { kind: "break", label: "middagpauze", afterPeriod: 4, start: hm(12, 30), end: hm(13, 20), line: true },
   { kind: "lesson", period: 5, start: hm(13, 20), end: hm(14, 10) },
   { kind: "lesson", period: 6, start: hm(14, 10), end: hm(15, 0) },
-  {
-    kind: "break",
-    label: "kleine pauze",
-    afterPeriod: 6,
-    start: hm(15, 0),
-    end: hm(15, 10),
-  },
+  { kind: "break", label: "kleine pauze", afterPeriod: 6, start: hm(15, 0), end: hm(15, 10), line: false },
   { kind: "lesson", period: 7, start: hm(15, 10), end: hm(16, 0) },
   { kind: "lesson", period: 8, start: hm(16, 0), end: hm(16, 50) },
 ];
@@ -64,12 +50,13 @@ export type NowSlot = Slot & {
   progress: number;
 };
 
-/** The name of the break that follows a given period, e.g. "middagpauze". */
-export function breakLabelAfter(period: number): string | null {
-  const brk = SCHEDULE.find(
-    (s) => s.kind === "break" && s.afterPeriod === period,
+/** The breaks that want a divider line, in schedule order. */
+export function breakLines(schedule: Slot[]): { afterPeriod: number; label: string }[] {
+  return schedule.flatMap((s) =>
+    s.kind === "break" && s.line
+      ? [{ afterPeriod: s.afterPeriod, label: s.label }]
+      : [],
   );
-  return brk?.kind === "break" ? brk.label : null;
 }
 
 // Never allowed to throw at module load: this runs client-side (via the lesson
@@ -124,8 +111,11 @@ function runsOn(slot: Slot, day: number): boolean {
 }
 
 /** The lesson or break covering a given point in the week. */
-export function slotAt(at: { day: number; minutes: number }): NowSlot | null {
-  for (const slot of SCHEDULE) {
+export function slotAt(
+  schedule: Slot[],
+  at: { day: number; minutes: number },
+): NowSlot | null {
+  for (const slot of schedule) {
     if (at.minutes < slot.start || at.minutes >= slot.end) continue;
     if (!runsOn(slot, at.day)) return null;
     return {
@@ -137,8 +127,11 @@ export function slotAt(at: { day: number; minutes: number }): NowSlot | null {
 }
 
 /** The lesson or break happening right now, or null outside school hours. */
-export function currentSlot(now: Date = new Date()): NowSlot | null {
-  return slotAt(schoolTime(now));
+export function currentSlot(
+  schedule: Slot[],
+  now: Date = new Date(),
+): NowSlot | null {
+  return slotAt(schedule, schoolTime(now));
 }
 
 /**

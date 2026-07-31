@@ -11,6 +11,8 @@ import { readBirthdays } from "./birthdays";
 import { readEvents } from "./events";
 import { readKeyDuties } from "./keys";
 import { readMessages } from "./messages";
+import { readSchedule } from "./rooster";
+import { DEFAULT_SCHEDULE, type Slot } from "./schedule";
 import {
   EMPTY_SETTINGS,
   readSettings,
@@ -31,7 +33,6 @@ import type {
 
 const TIMEZONE = process.env.TIMEZONE ?? "Europe/Brussels";
 const LOCALE = process.env.LOCALE ?? "nl-BE";
-const BREAK_AFTER_PERIOD = Number(process.env.BREAK_AFTER_PERIOD ?? "4");
 const ENV_THEME = process.env.THEME === "dark" ? "dark" : "light";
 const ENV_ACCENT = ["coral", "gold", "blue"].includes(process.env.ACCENT ?? "")
   ? (process.env.ACCENT as Accent)
@@ -102,18 +103,21 @@ export async function getBoardData(
   let birthdays: Birthday[] = demoBirthdays;
   let messages: BoardMessage[] = demoMessages;
   let settings: Record<string, ScreenSettings> = demoSettings;
+  let schedule: Slot[] = DEFAULT_SCHEDULE;
   let substitutionsUnavailable = false;
   const demo = !isSheetConfigured();
 
   if (!demo) {
-    const [subs, duties, evts, bdays, msgs, sets] = await Promise.allSettled([
-      readSubstitutions(date),
-      readKeyDuties(date),
-      readEvents(date),
-      readBirthdays(date),
-      readMessages(date),
-      readSettings(),
-    ]);
+    const [subs, duties, evts, bdays, msgs, sets, sched] =
+      await Promise.allSettled([
+        readSubstitutions(date),
+        readKeyDuties(date),
+        readEvents(date),
+        readBirthdays(date),
+        readMessages(date),
+        readSettings(),
+        readSchedule(),
+      ]);
 
     if (subs.status === "fulfilled") {
       substitutions = subs.value;
@@ -155,6 +159,13 @@ export async function getBoardData(
     settings = sets.status === "fulfilled" ? sets.value : {};
     if (sets.status === "rejected") {
       console.error("[board] settings sheet read failed", sets.reason);
+    }
+
+    // No Schedule tab (or a failed read) → the built-in default timetable.
+    if (sched.status === "fulfilled" && sched.value) {
+      schedule = sched.value;
+    } else if (sched.status === "rejected") {
+      console.error("[board] schedule sheet read failed", sched.reason);
     }
   }
 
@@ -198,9 +209,7 @@ export async function getBoardData(
     appearance: { theme, accent },
     screenName: set.name,
     substitutions,
-    breakAfterPeriod: Number.isFinite(BREAK_AFTER_PERIOD)
-      ? BREAK_AFTER_PERIOD
-      : null,
+    schedule,
     messages: rotation,
     birthdays,
     keys,

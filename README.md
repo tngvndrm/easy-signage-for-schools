@@ -88,7 +88,7 @@ row is live and how far into it we are. A block like "1 & 2" stays marked
 through both periods. During the middagpauze the divider itself lights up
 instead.
 
-The timetable lives in [`lib/schedule.ts`](lib/schedule.ts):
+The timetable comes from the `Schedule` tab (falling back to a built-in default when the tab is absent):
 
 | | | | |
 | --- | --- | --- | --- |
@@ -99,13 +99,23 @@ The timetable lives in [`lib/schedule.ts`](lib/schedule.ts):
 | 4 | 11:40–12:30 | 8 | 16:00–16:50 |
 | *middagpauze* | 12:30–13:20 | | |
 
-Wednesday ends after period 4. Outside those windows — before the first bell,
-after the last, and all weekend — nothing is marked. The marker reads the Pi's
-own clock rather than the server's, so it stays right even if the board is
-showing cached data.
+The board draws a divider line only for breaks whose **Toon pauzelijn** is
+ticked (the middagpauze here), named as in the sheet. A school with fewer
+substitutions can tick more breaks to show their lines too. Wednesday ends after
+period 4 (still a code constant). Outside school hours nothing is marked, and
+the marker reads the Pi's own clock, so it stays right even on cached data.
 
 Append `?now=11:20` (or `?now=wed+12:45`) to a screen URL to freeze it at
 another moment and see how it will look without waiting for the day.
+
+### Timetable (`Schedule` tab)
+
+One row per slot, in time order. `Lesuur` is a **period number** for a lesson or
+a **break name** for a break; `Starttijd`/`Eindtijd` are `H:MM`; `Toon pauzelijn`
+ticks whether that break shows a divider on the board. The board reads it for
+both the "now" marker and the divider lines, so adjusting bells or moving the
+divider is a sheet edit — no redeploy. A break's position is taken from its place
+in the list (the divider lands after the lesson above it).
 
 ### Classroom keys
 
@@ -317,6 +327,7 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
 | `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start` |
+| `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
 
 Importable CSV starting points for every tab are in
 [`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,

@@ -6,6 +6,7 @@ import {
   parseTimeOverride,
   slotAt,
   type NowSlot,
+  type Slot,
 } from "@/lib/schedule";
 
 /** Often enough for a smooth progress bar, cheap enough to run all day. */
@@ -20,22 +21,22 @@ const TICK_MS = 10_000;
  * `?now=10:15` (optionally `?now=wed+12:45`) freezes it at another moment, so
  * the board can be checked at any point of the day from a desk.
  */
-export function useCurrentSlot(): NowSlot | null {
+export function useCurrentSlot(schedule: Slot[]): NowSlot | null {
   const [slot, setSlot] = useState<NowSlot | null>(null);
 
   useEffect(() => {
     const override = new URLSearchParams(window.location.search).get("now");
     const frozen = override ? parseTimeOverride(override) : null;
     if (frozen) {
-      setSlot(slotAt(frozen));
+      setSlot(slotAt(schedule, frozen));
       return;
     }
 
-    const tick = () => setSlot(currentSlot());
+    const tick = () => setSlot(currentSlot(schedule));
     tick();
     const timer = setInterval(tick, TICK_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [schedule]);
 
   return slot;
 }

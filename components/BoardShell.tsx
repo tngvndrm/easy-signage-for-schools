@@ -284,7 +284,7 @@ export function BoardShell({
         <div className="flex min-h-0 flex-1 gap-[1rem]">
           <SubstitutionBoard
             substitutions={data.substitutions}
-            breakAfterPeriod={data.breakAfterPeriod}
+            schedule={data.schedule}
             unavailable={data.substitutionsUnavailable}
             comfortableRows={WIDE_COMFORTABLE_ROWS}
           />
@@ -307,7 +307,7 @@ export function BoardShell({
           ) : (
             <SubstitutionBoard
               substitutions={data.substitutions}
-              breakAfterPeriod={data.breakAfterPeriod}
+              schedule={data.schedule}
               unavailable={data.substitutionsUnavailable}
             />
           )}

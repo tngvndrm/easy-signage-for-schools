@@ -1,6 +1,6 @@
 "use client";
 
-import { breakLabelAfter } from "@/lib/schedule";
+import { breakLines, type Slot } from "@/lib/schedule";
 import type { Substitution } from "@/lib/types";
 import { useCurrentSlot } from "./useCurrentSlot";
 
@@ -102,20 +102,21 @@ function rowScale(rowCount: number, comfortable: number): number {
 
 export function SubstitutionBoard({
   substitutions,
-  breakAfterPeriod,
+  schedule,
   unavailable = false,
   comfortableRows = 7,
 }: {
   substitutions: Substitution[];
-  breakAfterPeriod: number | null;
+  schedule: Slot[];
   /** The sheet couldn't be read — say so rather than implying a quiet day. */
   unavailable?: boolean;
   /** Rows that fit at full size before the table scales down. */
   comfortableRows?: number;
 }) {
   const groups = groupByPeriod(substitutions);
-  const slot = useCurrentSlot();
+  const slot = useCurrentSlot(schedule);
   const livePeriod = slot?.kind === "lesson" ? slot.period : null;
+  const lines = breakLines(schedule);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-[0.075rem] border-line bg-surface-1 py-[1.2rem]">
@@ -158,27 +159,33 @@ export function SubstitutionBoard({
           }}
         >
           {groups.map((group, index) => {
-            const showPauze =
-              breakAfterPeriod !== null &&
-              group.periodStart > breakAfterPeriod &&
-              (groups[index - 1]?.periodStart ?? 0) <= breakAfterPeriod;
+            // Every break line that falls between the previous shown group and
+            // this one (usually one; more only when periods are far apart).
+            const prevStart = groups[index - 1]?.periodStart ?? 0;
+            const dividers =
+              index === 0
+                ? []
+                : lines.filter(
+                    (l) =>
+                      group.periodStart > l.afterPeriod &&
+                      prevStart <= l.afterPeriod,
+                  );
 
             const isNow =
               livePeriod !== null && group.rows[0].periods.includes(livePeriod);
 
             return (
               <div key={`${group.period}-${index}`} className="contents">
-                {showPauze && breakAfterPeriod !== null && (
+                {dividers.map((l) => (
                   <PauzeDivider
-                    // Always name the actual break (e.g. "middagpauze"), not
-                    // just while it's live.
-                    label={breakLabelAfter(breakAfterPeriod) ?? "pauze"}
+                    key={`${l.label}-${l.afterPeriod}`}
+                    label={l.label}
                     now={
                       slot?.kind === "break" &&
-                      slot.afterPeriod === breakAfterPeriod
+                      slot.afterPeriod === l.afterPeriod
                     }
                   />
-                )}
+                ))}
                 <div
                   className={`flex min-h-0 flex-1 flex-col justify-center ${
                     index % 2 === 1 ? "rounded-md bg-surface-2" : ""

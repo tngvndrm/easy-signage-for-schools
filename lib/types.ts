@@ -1,5 +1,7 @@
 /** Shape of everything the board needs, in one payload. */
 
+import type { Slot } from "./schedule";
+
 export type Substitution = {
   /** Display label for the period, e.g. "3" or "1 & 2". */
   period: string;
@@ -82,8 +84,8 @@ export type BoardData = {
   /** Friendly screen name from the Settings tab, or null to show "Scherm N". */
   screenName: string | null;
   substitutions: Substitution[];
-  /** Period number after which the "pauze" divider is drawn. */
-  breakAfterPeriod: number | null;
+  /** The day's timetable — drives the "now" marker and the pauze dividers. */
+  schedule: Slot[];
   messages: BoardMessage[];
   birthdays: Birthday[];
   /** Outstanding classroom-key duties, late ones first. */

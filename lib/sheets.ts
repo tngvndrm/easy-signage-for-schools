@@ -84,6 +84,16 @@ export function findHeader<K extends string>(
 /** The tab named in a range doesn't exist (yet). */
 export class MissingTabError extends Error {}
 
+/** "18:00", "8:30" -> minutes since midnight; null if unparseable. */
+export function parseClock(raw: string): number | null {
+  const m = raw.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
 /** A tick-off cell: anything but empty or an explicit "no" counts as done. */
 export function isTicked(raw: string): boolean {
   const value = raw.trim();
