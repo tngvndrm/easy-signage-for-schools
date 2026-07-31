@@ -1,4 +1,10 @@
-import { fetchRange, findHeader, MissingTabError, normalizeDate } from "./sheets";
+import {
+  directImageUrl,
+  fetchRange,
+  findHeader,
+  MissingTabError,
+  normalizeDate,
+} from "./sheets";
 import type { EventItem } from "./types";
 
 const EVENTS_RANGE = process.env.EVENTS_SHEET_RANGE ?? "Evenementen!A1:H100";
@@ -17,24 +23,6 @@ const COLUMNS = {
   synopsis: ["synopsis", "omschrijving", "beschrijving", "tekst"],
   poster: ["poster", "afbeelding", "artwork", "beeld", "image"],
 };
-
-const DRIVE_ID = /(?:\/file\/d\/|[?&]id=)([\w-]{20,})/;
-
-/**
- * Staff paste whatever Drive gives them from the Share button, which is a
- * viewer page rather than an image. Rewrite it to a form a browser can render
- * directly; anything that isn't a Drive link is passed through untouched.
- *
- * The file still has to be shared "anyone with the link" — the board's browser
- * is anonymous, and doesn't carry the service account's access.
- */
-export function directImageUrl(raw: string): string {
-  const value = raw.trim();
-  if (!value) return "";
-  const match = value.match(DRIVE_ID);
-  if (!match) return value;
-  return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1600`;
-}
 
 function addDays(iso: string, days: number): string {
   // Noon avoids any chance of a DST shift moving the date.

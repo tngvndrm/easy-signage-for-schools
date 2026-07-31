@@ -91,6 +91,24 @@ export function isTicked(raw: string): boolean {
   return !["nee", "no", "false", "n"].includes(normalizeText(value));
 }
 
+const DRIVE_ID = /(?:\/file\/d\/|[?&]id=)([\w-]{20,})/;
+
+/**
+ * Staff paste whatever Drive gives them from the Share button, which is a
+ * viewer page rather than an image. Rewrite it to a form a browser can render
+ * directly; anything that isn't a Drive link is passed through untouched.
+ *
+ * The file still has to be shared "anyone with the link" — the board's browser
+ * is anonymous, and doesn't carry the service account's access.
+ */
+export function directImageUrl(raw: string): string {
+  const value = raw.trim();
+  if (!value) return "";
+  const match = value.match(DRIVE_ID);
+  if (!match) return value;
+  return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1600`;
+}
+
 // One auth client for the process; creating one per request re-does discovery.
 let auth: GoogleAuth | null = null;
 

@@ -10,11 +10,13 @@ import {
 import { readBirthdays } from "./birthdays";
 import { readEvents } from "./events";
 import { readKeyDuties } from "./keys";
+import { readMessages } from "./messages";
 import { isSheetConfigured } from "./sheets";
 import { readSubstitutions } from "./substitutions";
 import type {
   Birthday,
   BoardData,
+  BoardMessage,
   EventItem,
   KeyDuty,
   Substitution,
@@ -70,15 +72,17 @@ export async function getBoardData(
   let keys: KeyDuty[] = demoKeyDuties;
   let events: EventItem[] = demoEvents;
   let birthdays: Birthday[] = demoBirthdays;
+  let messages: BoardMessage[] = demoMessages;
   let substitutionsUnavailable = false;
   const demo = !isSheetConfigured();
 
   if (!demo) {
-    const [subs, duties, evts, bdays] = await Promise.allSettled([
+    const [subs, duties, evts, bdays, msgs] = await Promise.allSettled([
       readSubstitutions(date),
       readKeyDuties(date),
       readEvents(date),
       readBirthdays(date),
+      readMessages(date),
     ]);
 
     if (subs.status === "fulfilled") {
@@ -109,6 +113,13 @@ export async function getBoardData(
       console.error("[board] birthday sheet read failed", bdays.reason);
       birthdays = [];
     }
+
+    if (msgs.status === "fulfilled") {
+      messages = msgs.value;
+    } else {
+      console.error("[board] message sheet read failed", msgs.reason);
+      messages = [];
+    }
   }
 
   // Demo only: `?keys=2` trims the list so both presentations can be reviewed
@@ -128,8 +139,7 @@ export async function getBoardData(
     breakAfterPeriod: Number.isFinite(BREAK_AFTER_PERIOD)
       ? BREAK_AFTER_PERIOD
       : null,
-    // TODO: replace with Firestore collections once the admin UI lands.
-    messages: demoMessages,
+    messages,
     birthdays,
     keys,
     events,

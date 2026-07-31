@@ -138,6 +138,26 @@ To see either presentation without waiting for its cycle, append to a screen URL
 
 Both are also linked from the site index at `/`.
 
+### Messages
+
+The rotating notices — pickup calls, reminders, fundraiser posters — come from
+the `Mededelingen` tab. Each has an optional show-window, so an item puts itself
+up and takes itself down instead of someone remembering to delete it.
+
+| Titel | Tekst | Van | Tot | Afbeelding | Volledig beeld |
+| --- | --- | --- | --- | --- | --- |
+| Afhalen | Lotte (7A) … | | | | FALSE |
+| Wafelverkoop 6A | Steun de bosklassen … | 01/09/2026 | 05/09/2026 | *(Drive link)* | TRUE |
+
+- **Van / Tot** are optional. Blank `Van` = from now; blank `Tot` = until
+  removed; neither = always shown. Same forgiving date formats as the rest.
+- **Afbeelding** is a Drive share link, rewritten to a direct image the same way
+  event posters are (share it "anyone with the link").
+- **Volledig beeld** is a tickbox (`TRUE`/`x`/`ja`). Ticked *and* with an image,
+  the message becomes full-bleed artwork — the picture fills the card and the
+  text sits over it on a scrim. Blank, the image is a side thumbnail. Meant for
+  fundraiser posters.
+
 ### Events and posters
 
 Theatre plays and similar events get the whole screen, in short bursts, because
@@ -233,7 +253,7 @@ Three steps, all needing a Google account this repo doesn't have:
    On Cloud Run, attach the service account to the revision instead — no key
    file to store.
 2. Share the sheet with that service account's email address as **Viewer**.
-3. Add a **`Sleutels`** tab (keys) and a **`Verjaardagen`** tab (birthdays) —
+3. Add the optional tabs — **`Sleutels`** (keys), **`Verjaardagen`** (birthdays), **`Mededelingen`** (messages) and **`Evenementen`** (events) —
    until each exists its feature simply stays dormant, the rest of the board is
    unaffected:
 
