@@ -258,12 +258,11 @@ Three steps, all needing a Google account this repo doesn't have:
    unaffected:
 
    ```
-   Datum	Klas	Leerling	Ophalen	Opgehaald	Terugbrengen	Teruggebracht
+   Klas	Leerling	Ophalen	Opgehaald	Terugbrengen	Teruggebracht
+   Titel	Tekst	Van	Tot	Afbeelding	Volledig beeld
+   Datum	Tijd	Toon vanaf	Klas	Titel	Synopsis	Poster
    Voornaam	Naam	Klas	Datum
    ```
-
-   `Datum` is optional: it stands in as the pickup date when `Ophalen` is left
-   blank, which makes loading a whole trimester up front easier.
 
 Then uncomment `SHEET_ID` in `.env.local`. `npm run check:sheet` verifies each
 step and prints the service-account address to share with.

@@ -17,12 +17,6 @@ const KEYS_RANGE = process.env.KEYS_SHEET_RANGE ?? "Sleutels!A1:H200";
  * Friday-out, Monday-back rhythm without any special cases here.
  */
 const COLUMNS = {
-  /**
-   * A row-level date, used as the pickup date when `Ophalen` is left blank.
-   * Filling a whole trimester up front is easier with one date column than
-   * two, and this way either style reads correctly.
-   */
-  datum: ["datum", "date"],
   klas: ["klas", "class", "groep"],
   student: ["leerling", "student", "naam", "name"],
   pickupDate: ["ophalen", "afhalen", "datumophalen", "datumafhalen", "pickup"],
@@ -69,9 +63,7 @@ export async function readKeyDuties(today: string): Promise<KeyDuty[]> {
     const legs = [
       {
         action: "pickup" as const,
-        date:
-          normalizeDate(cell(columns.pickupDate)) ??
-          normalizeDate(cell(columns.datum)),
+        date: normalizeDate(cell(columns.pickupDate)),
         done: isTicked(cell(columns.pickupDone)),
       },
       {
