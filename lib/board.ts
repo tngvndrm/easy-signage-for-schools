@@ -1,11 +1,10 @@
 import {
+  demoBigSlidePreview,
   demoBirthdays,
   demoEvents,
   demoKeyDuties,
   demoMessages,
   demoSubstitutions,
-  demoTakeover,
-  demoTakeoverPreview,
 } from "./demo-data";
 import { readBirthdays } from "./birthdays";
 import { readEvents } from "./events";
@@ -128,9 +127,21 @@ export async function getBoardData(
     keys = keys.slice(0, Math.max(0, options.keyLimit));
   }
 
-  // Same affordance as ?takeover=1: show a sample so the layout can be
-  // reviewed before a real event is ever entered.
+  // Show a sample so a layout can be reviewed before real data exists.
   if (options.previewEvent && events.length === 0) events = demoEvents;
+
+  // Big Slides take over the whole screen, so they're pulled out of the small
+  // rotation: "permanent" holds the screen, "periodic" bursts onto it.
+  let permanentSlides = messages.filter((m) => m.bigSlide === "permanent");
+  const periodicSlides = messages.filter((m) => m.bigSlide === "periodic");
+  const rotation = messages.filter((m) => !m.bigSlide);
+  if (
+    options.previewTakeover &&
+    permanentSlides.length === 0 &&
+    periodicSlides.length === 0
+  ) {
+    permanentSlides = [demoBigSlidePreview];
+  }
 
   return {
     date,
@@ -139,11 +150,12 @@ export async function getBoardData(
     breakAfterPeriod: Number.isFinite(BREAK_AFTER_PERIOD)
       ? BREAK_AFTER_PERIOD
       : null,
-    messages,
+    messages: rotation,
     birthdays,
     keys,
     events,
-    takeover: options.previewTakeover ? demoTakeoverPreview : demoTakeover,
+    permanentSlides,
+    periodicSlides,
     fetchedAt: now.getTime(),
     demo,
     substitutionsUnavailable,

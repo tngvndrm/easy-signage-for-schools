@@ -5,8 +5,21 @@ import {
   isTicked,
   MissingTabError,
   normalizeDate,
+  normalizeText,
 } from "./sheets";
 import type { BoardMessage } from "./types";
+
+/** The "Big Slide" select: blank / "Yes" (periodic) / "Permanent". */
+function parseBigSlide(raw: string): "periodic" | "permanent" | undefined {
+  const value = normalizeText(raw);
+  if (["permanent", "vast", "altijd", "blijvend"].includes(value)) {
+    return "permanent";
+  }
+  if (["yes", "ja", "x", "true", "waar", "periodiek", "aan"].includes(value)) {
+    return "periodic";
+  }
+  return undefined;
+}
 
 const MESSAGES_RANGE = process.env.MESSAGES_SHEET_RANGE ?? "Mededelingen!A1:H200";
 
@@ -23,6 +36,7 @@ const COLUMNS = {
   tot: ["tot", "totenmet", "einde", "end"],
   afbeelding: ["afbeelding", "beeld", "artwork", "image", "poster"],
   cover: ["volledigbeeld", "volledig", "cover", "fullbleed", "grootbeeld"],
+  bigSlide: ["bigslide", "grootscherm", "volledigscherm", "takeover", "overname"],
 };
 
 /**
@@ -62,6 +76,7 @@ export async function readMessages(today: string): Promise<BoardMessage[]> {
     if (until && today > until) continue;
 
     const imageUrl = directImageUrl(cell(columns.afbeelding));
+    const bigSlide = parseBigSlide(cell(columns.bigSlide));
 
     out.push({
       id: `msg-${i}-${title}`,
@@ -70,6 +85,7 @@ export async function readMessages(today: string): Promise<BoardMessage[]> {
       ...(imageUrl ? { imageUrl } : {}),
       // Full-bleed only makes sense with an image behind the text.
       cover: !!imageUrl && isTicked(cell(columns.cover)),
+      ...(bigSlide ? { bigSlide } : {}),
     });
   }
 

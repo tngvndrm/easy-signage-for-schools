@@ -4,7 +4,6 @@ import type {
   EventItem,
   KeyDuty,
   Substitution,
-  Takeover,
 } from "./types";
 
 /**
@@ -90,11 +89,9 @@ export const demoEvents: EventItem[] = [
   },
 ];
 
-/** Flip to a Takeover object (or set ?takeover=1 on the board URL) to preview. */
-export const demoTakeover: Takeover | null = null;
-
-export const demoTakeoverPreview: Takeover = {
-  id: "preview",
+/** Shown full-screen by `?takeover=1`, to preview the Big Slide layout. */
+export const demoBigSlidePreview: BoardMessage = {
+  id: "preview-bigslide",
   title: "Fijn weekend!",
   body: "Maandag starten we om 8u40 met een gezamenlijke opening in de aula.",
 };

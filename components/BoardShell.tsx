@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BigSlide } from "./BigSlide";
 import { BirthdayZone } from "./BirthdayZone";
 import { BrandMark } from "./BrandMark";
 import { Clock } from "./Clock";
@@ -9,7 +10,6 @@ import { KeyPanel } from "./KeyPanel";
 import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
 import { SubstitutionBoard } from "./SubstitutionBoard";
-import { Takeover } from "./Takeover";
 import { useIdlePointer } from "./useIdlePointer";
 import type { BoardData } from "@/lib/types";
 
@@ -34,11 +34,13 @@ const EVENT_POSTER_FOR_MS = 25_000;
 const SUBS_WIDE_THRESHOLD = 8;
 /** Rows that fit at full size once the board owns the full height. */
 const WIDE_COMFORTABLE_ROWS = 9;
+/** How long each Big Slide holds the screen when several are active. */
+const BIG_SLIDE_FOR_MS = 20_000;
 /** After this long without a successful poll, tell the room the data is old. */
 const STALE_MS = 5 * 60_000;
 const CACHE_KEY = "infoborden:board";
 
-type Interrupt = "keys" | "event";
+type Interrupt = "keys" | "event" | "bigslide";
 
 function readCache(): BoardData | null {
   try {
@@ -75,9 +77,24 @@ export function BoardShell({
   const lastOkRef = useRef<number>(Date.now());
   const idle = useIdlePointer();
   const [showing, setShowing] = useState<Interrupt | null>(null);
+  const [permIndex, setPermIndex] = useState(0);
+  const [periodicIndex, setPeriodicIndex] = useState(0);
 
   const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
   const event = data.events[0] ?? null;
+
+  // Permanent Big Slides hold the whole screen; if several, they cycle.
+  const permanentSlides = data.permanentSlides;
+  const permanentSlide = permanentSlides.length
+    ? permanentSlides[permIndex % permanentSlides.length]
+    : null;
+  const periodicSlides = data.periodicSlides;
+
+  useEffect(() => {
+    if (permanentSlides.length < 2) return;
+    const timer = setInterval(() => setPermIndex((i) => i + 1), BIG_SLIDE_FOR_MS);
+    return () => clearInterval(timer);
+  }, [permanentSlides.length]);
 
   /*
    * One rotation drives every interruption. Two independent timers would
@@ -87,6 +104,7 @@ export function BoardShell({
   const queue: Interrupt[] = [];
   if (manyKeys) queue.push("keys");
   if (event) queue.push("event");
+  if (periodicSlides.length) queue.push("bigslide");
   const queueKey = queue.join(",");
 
   useEffect(() => {
@@ -100,9 +118,15 @@ export function BoardShell({
     const cycle = setInterval(() => {
       const next = due[turn++ % due.length];
       setShowing(next);
+      // Advance through the periodic slides so each burst shows the next one.
+      if (next === "bigslide") setPeriodicIndex((i) => i + 1);
       hide = setTimeout(
         () => setShowing(null),
-        next === "keys" ? KEY_PANEL_FOR_MS : EVENT_POSTER_FOR_MS,
+        next === "keys"
+          ? KEY_PANEL_FOR_MS
+          : next === "event"
+            ? EVENT_POSTER_FOR_MS
+            : BIG_SLIDE_FOR_MS,
       );
     }, INTERRUPT_EVERY_MS);
     return () => {
@@ -115,6 +139,10 @@ export function BoardShell({
   const showKeys =
     (showing === "keys" || forceKeyPanel) && data.keys.length > 0;
   const showEvent = (showing === "event" || forceEvent) && event !== null;
+  const periodicSlide =
+    showing === "bigslide" && periodicSlides.length > 0
+      ? periodicSlides[periodicIndex % periodicSlides.length]
+      : null;
 
   // Past this many substitutions the top-65%-tall board gets cramped, so the
   // layout reflows to give it the full height (see the two return branches).
@@ -169,15 +197,27 @@ export function BoardShell({
     };
   }, [poll]);
 
-  // An admin-authored takeover outranks the key panel: it was scheduled for
-  // this exact day on purpose.
-  if (data.takeover) {
+  // A "Permanent" Big Slide holds the whole screen for its window — it outranks
+  // everything, since it was set for exactly these days on purpose.
+  if (permanentSlide) {
     return (
       <main
         className="kiosk h-screen w-screen overflow-hidden"
         data-idle={idle}
       >
-        <Takeover takeover={data.takeover} />
+        <BigSlide message={permanentSlide} />
+      </main>
+    );
+  }
+
+  // A "Yes" Big Slide bursts full-screen on its turn in the rotation.
+  if (periodicSlide) {
+    return (
+      <main
+        className="kiosk h-screen w-screen overflow-hidden"
+        data-idle={idle}
+      >
+        <BigSlide message={periodicSlide} />
       </main>
     );
   }

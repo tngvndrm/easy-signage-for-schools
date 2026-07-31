@@ -28,6 +28,14 @@ export type BoardMessage = {
    * posters and the like.
    */
   cover?: boolean;
+  /**
+   * Take over the whole screen, replacing the dashboard. `"periodic"` shows it
+   * full-screen in short bursts every few minutes (the board stays visible
+   * between); `"permanent"` holds it full-screen for the message's whole window
+   * — for welcome-back / holiday messages where nothing else matters. Distinct
+   * from `cover`, which only restyles the in-rotation card.
+   */
+  bigSlide?: "periodic" | "permanent";
   /** Seconds this item stays on screen in the rotation. */
   durationSec?: number;
 };
@@ -64,13 +72,6 @@ export type EventItem = {
   posterUrl: string;
 };
 
-export type Takeover = {
-  id: string;
-  title: string;
-  body?: string;
-  imageUrl?: string;
-};
-
 export type BoardData = {
   /** ISO date (Europe/Brussels) the substitution rows belong to. */
   date: string;
@@ -85,8 +86,10 @@ export type BoardData = {
   keys: KeyDuty[];
   /** Events currently within their announcement window, soonest first. */
   events: EventItem[];
-  /** Non-null => board renders full-screen takeover instead of the dashboard. */
-  takeover: Takeover | null;
+  /** In-window "Permanent" Big Slides — held full-screen over the dashboard. */
+  permanentSlides: BoardMessage[];
+  /** In-window "Yes" Big Slides — shown full-screen in periodic bursts. */
+  periodicSlides: BoardMessage[];
   /** Server timestamp (ms) of this payload; used for the staleness indicator. */
   fetchedAt: number;
   /** True when the payload came from mock data, not a real Sheet. */

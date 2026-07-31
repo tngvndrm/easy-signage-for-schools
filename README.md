@@ -144,10 +144,11 @@ The rotating notices — pickup calls, reminders, fundraiser posters — come fr
 the `Mededelingen` tab. Each has an optional show-window, so an item puts itself
 up and takes itself down instead of someone remembering to delete it.
 
-| Titel | Tekst | Van | Tot | Afbeelding | Volledig beeld |
-| --- | --- | --- | --- | --- | --- |
-| Afhalen | Lotte (7A) … | | | | FALSE |
-| Wafelverkoop 6A | Steun de bosklassen … | 01/09/2026 | 05/09/2026 | *(Drive link)* | TRUE |
+| Titel | Tekst | Van | Tot | Afbeelding | Volledig beeld | Big Slide |
+| --- | --- | --- | --- | --- | --- | --- |
+| Afhalen | Lotte (7A) … | | | | FALSE | No |
+| Wafelverkoop 6A | Steun de bosklassen … | 01/09/2026 | 05/09/2026 | *(Drive link)* | TRUE | No |
+| Fijn verlof! | We zien elkaar terug op 1 september. | 04/07 | 31/08 | | | Permanent |
 
 - **Van / Tot** are optional. Blank `Van` = from now; blank `Tot` = until
   removed; neither = always shown. Same forgiving date formats as the rest.
@@ -157,6 +158,14 @@ up and takes itself down instead of someone remembering to delete it.
   the message becomes full-bleed artwork — the picture fills the card and the
   text sits over it on a scrim. Blank, the image is a side thumbnail. Meant for
   fundraiser posters.
+- **Big Slide** takes the message *out* of the small card and onto the whole
+  screen (using the same artwork/poster/text treatment):
+  - blank / `No` — stays a card in the rotation.
+  - `Yes` — full-screen in short bursts every few minutes; the dashboard stays
+    visible between bursts, like an event poster.
+  - `Permanent` — held full-screen for the whole `Van`–`Tot` window, hiding the
+    dashboard. For "welcome back" / holiday messages where nothing else matters.
+    Several at once rotate.
 
 ### Events and posters
 
