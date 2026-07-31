@@ -61,15 +61,31 @@ export function BigSlide({ message }: { message: BoardMessage }) {
     );
   }
 
+  // Centred reads well for a short line or two; a long paragraph doesn't, so
+  // past a threshold it left-aligns (title included) and steps the type down.
+  const long = (message.body?.length ?? 0) > 170;
+
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-accent-hover">
       <span className="blob bg-accent" />
-      <div className="animate-fade-up relative flex flex-col items-center gap-[1.6rem] px-[6rem] text-center">
-        <h1 className="font-display text-[5.5rem] font-bold leading-[1.05] text-white">
+      <div
+        className={`animate-fade-up relative flex flex-col gap-[1.4rem] px-[6rem] ${
+          long ? "max-w-[62rem] items-start text-left" : "items-center text-center"
+        }`}
+      >
+        <h1
+          className={`font-display font-bold leading-[1.05] text-white ${
+            long ? "text-[3.8rem]" : "text-[5.5rem]"
+          }`}
+        >
           {message.title}
         </h1>
         {message.body && (
-          <p className="max-w-[42rem] text-[2rem] leading-[1.35] text-white/90">
+          <p
+            className={`leading-[1.4] text-white/90 ${
+              long ? "text-[1.9rem]" : "max-w-[42rem] text-[2rem]"
+            }`}
+          >
             {message.body}
           </p>
         )}

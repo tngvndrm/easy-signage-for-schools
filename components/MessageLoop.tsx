@@ -115,6 +115,13 @@ export function MessageLoop({
   const cover = !!(message?.cover && message.imageUrl);
   // A non-cover image: a side thumbnail normally, stacked on top in the tall card.
   const topImage = !!(message?.imageUrl && !cover && tall);
+  // A card has finite room; an over-long message is clamped with an ellipsis
+  // rather than breaking the layout. How much fits depends on the card's shape.
+  const bodyClamp = topImage
+    ? "line-clamp-[8]"
+    : tall
+      ? "line-clamp-[14]"
+      : "line-clamp-4";
   // Header sits over artwork in cover mode; give it a scrim-proof shadow.
   const coverText = cover
     ? "text-white [text-shadow:0_0.08rem_0.25rem_rgba(0,0,0,0.7)]"
@@ -210,10 +217,10 @@ export function MessageLoop({
             </div>
           ) : cover && message ? (
             <div className="min-w-0">
-              <h3 className="font-display text-[1.8rem] font-bold leading-tight text-white">
+              <h3 className="line-clamp-2 font-display text-[1.8rem] font-bold leading-tight text-white">
                 {message.title}
               </h3>
-              <p className="pt-[0.3rem] text-[1.4rem] leading-[1.3] text-white/95">
+              <p className="line-clamp-4 pt-[0.3rem] text-[1.4rem] leading-[1.3] text-white/95">
                 {message.body}
               </p>
             </div>
@@ -237,10 +244,10 @@ export function MessageLoop({
                   />
                 )}
                 <div className="min-h-0 min-w-0">
-                  <h3 className="font-display text-[1.7rem] font-bold leading-tight text-accent">
+                  <h3 className="line-clamp-2 font-display text-[1.7rem] font-bold leading-tight text-accent">
                     {message.title}
                   </h3>
-                  <p className="pt-[0.3rem] text-[1.4rem] leading-[1.3]">
+                  <p className={`${bodyClamp} pt-[0.3rem] text-[1.4rem] leading-[1.3]`}>
                     {message.body}
                   </p>
                 </div>
