@@ -77,6 +77,10 @@ export type BoardData = {
   date: string;
   /** Human date line, pre-formatted server-side so all screens agree. */
   dateLabel: string;
+  /** Resolved theme + accent for this screen (query > sheet > env). */
+  appearance: { theme: "light" | "dark"; accent: "coral" | "gold" | "blue" };
+  /** Friendly screen name from the Settings tab, or null to show "Scherm N". */
+  screenName: string | null;
   substitutions: Substitution[];
   /** Period number after which the "pauze" divider is drawn. */
   breakAfterPeriod: number | null;

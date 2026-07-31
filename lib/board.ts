@@ -4,14 +4,22 @@ import {
   demoEvents,
   demoKeyDuties,
   demoMessages,
+  demoSettings,
   demoSubstitutions,
 } from "./demo-data";
 import { readBirthdays } from "./birthdays";
 import { readEvents } from "./events";
 import { readKeyDuties } from "./keys";
 import { readMessages } from "./messages";
+import {
+  EMPTY_SETTINGS,
+  readSettings,
+  type ScreenSettings,
+  themeAt,
+} from "./settings";
 import { isSheetConfigured } from "./sheets";
 import { readSubstitutions } from "./substitutions";
+import { type Accent } from "./theme";
 import type {
   Birthday,
   BoardData,
@@ -24,6 +32,10 @@ import type {
 const TIMEZONE = process.env.TIMEZONE ?? "Europe/Brussels";
 const LOCALE = process.env.LOCALE ?? "nl-BE";
 const BREAK_AFTER_PERIOD = Number(process.env.BREAK_AFTER_PERIOD ?? "4");
+const ENV_THEME = process.env.THEME === "dark" ? "dark" : "light";
+const ENV_ACCENT = ["coral", "gold", "blue"].includes(process.env.ACCENT ?? "")
+  ? (process.env.ACCENT as Accent)
+  : "coral";
 
 /** yyyy-mm-dd in the school's timezone, not the server's. */
 export function todayInSchoolTz(now = new Date()): string {
@@ -33,6 +45,18 @@ export function todayInSchoolTz(now = new Date()): string {
     month: "2-digit",
     day: "2-digit",
   }).format(now);
+}
+
+/** Minutes since midnight in the school's timezone. */
+function minutesInSchoolTz(now = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  return (get("hour") % 24) * 60 + get("minute");
 }
 
 function dateLabel(now = new Date()): string {
@@ -62,6 +86,11 @@ export async function getBoardData(
     date?: string;
     /** Preview the event poster even when no event is scheduled. */
     previewEvent?: boolean;
+    /** Which screen (1/2/3) — selects its row in the Settings tab. */
+    screenId?: string;
+    /** Query overrides that beat the sheet: ?theme=, ?accent=. */
+    themeOverride?: "light" | "dark";
+    accentOverride?: Accent;
   } = {},
 ): Promise<BoardData> {
   const now = new Date();
@@ -72,16 +101,18 @@ export async function getBoardData(
   let events: EventItem[] = demoEvents;
   let birthdays: Birthday[] = demoBirthdays;
   let messages: BoardMessage[] = demoMessages;
+  let settings: Record<string, ScreenSettings> = demoSettings;
   let substitutionsUnavailable = false;
   const demo = !isSheetConfigured();
 
   if (!demo) {
-    const [subs, duties, evts, bdays, msgs] = await Promise.allSettled([
+    const [subs, duties, evts, bdays, msgs, sets] = await Promise.allSettled([
       readSubstitutions(date),
       readKeyDuties(date),
       readEvents(date),
       readBirthdays(date),
       readMessages(date),
+      readSettings(),
     ]);
 
     if (subs.status === "fulfilled") {
@@ -119,6 +150,24 @@ export async function getBoardData(
       console.error("[board] message sheet read failed", msgs.reason);
       messages = [];
     }
+
+    // Settings failing must not blank the board — fall back to env defaults.
+    settings = sets.status === "fulfilled" ? sets.value : {};
+    if (sets.status === "rejected") {
+      console.error("[board] settings sheet read failed", sets.reason);
+    }
+  }
+
+  // Resolve this screen's appearance: query override > sheet setting > env.
+  const set = (options.screenId && settings[options.screenId]) || EMPTY_SETTINGS;
+  const accent = options.accentOverride ?? set.accent ?? ENV_ACCENT;
+  let theme: "light" | "dark";
+  if (options.themeOverride) {
+    theme = options.themeOverride;
+  } else if (set.darkStartMin !== null && set.lightStartMin !== null) {
+    theme = themeAt(minutesInSchoolTz(now), set.lightStartMin, set.darkStartMin);
+  } else {
+    theme = ENV_THEME;
   }
 
   // Demo only: `?keys=2` trims the list so both presentations can be reviewed
@@ -146,6 +195,8 @@ export async function getBoardData(
   return {
     date,
     dateLabel: dateLabel(options.date ? new Date(`${options.date}T12:00:00`) : now),
+    appearance: { theme, accent },
+    screenName: set.name,
     substitutions,
     breakAfterPeriod: Number.isFinite(BREAK_AFTER_PERIOD)
       ? BREAK_AFTER_PERIOD

@@ -83,6 +83,15 @@ export function BoardShell({
   const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
   const event = data.events[0] ?? null;
 
+  // Theme + accent are resolved server-side per screen (Settings tab); applied
+  // on the root of every layout so the whole screen — including a takeover —
+  // themes together. Refreshed by the poll, so a sheet change lands within 30s.
+  const root = {
+    "data-theme": data.appearance.theme,
+    "data-accent": data.appearance.accent,
+    "data-idle": idle,
+  } as const;
+
   // Permanent Big Slides hold the whole screen; if several, they cycle.
   const permanentSlides = data.permanentSlides;
   const permanentSlide = permanentSlides.length
@@ -154,11 +163,11 @@ export function BoardShell({
 
   const poll = useCallback(async () => {
     try {
-      // Carry the page's own query through, so a preview (?takeover, ?keys)
-      // survives the next poll instead of being overwritten by live data.
-      const res = await fetch(`/api/board${window.location.search}`, {
-        cache: "no-store",
-      });
+      // Carry the page's own query through (so a preview survives the poll) and
+      // add the screen id, so the poll gets this screen's settings/appearance.
+      const params = new URLSearchParams(window.location.search);
+      params.set("screen", screenId);
+      const res = await fetch(`/api/board?${params}`, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const next = (await res.json()) as BoardData;
       setData(next);
@@ -169,7 +178,7 @@ export function BoardShell({
       // Keep the last good render on screen; only flag how old it is.
       setStale(Date.now() - lastOkRef.current > STALE_MS);
     }
-  }, []);
+  }, [screenId]);
 
   // If the server itself failed to reach the Sheet, fall back to the last copy
   // this screen saw today rather than showing an empty board.
@@ -202,8 +211,8 @@ export function BoardShell({
   if (permanentSlide) {
     return (
       <main
-        className="kiosk h-screen w-screen overflow-hidden"
-        data-idle={idle}
+        className="kiosk h-screen w-screen overflow-hidden bg-bg text-text"
+        {...root}
       >
         <BigSlide message={permanentSlide} />
       </main>
@@ -214,8 +223,8 @@ export function BoardShell({
   if (periodicSlide) {
     return (
       <main
-        className="kiosk h-screen w-screen overflow-hidden"
-        data-idle={idle}
+        className="kiosk h-screen w-screen overflow-hidden bg-bg text-text"
+        {...root}
       >
         <BigSlide message={periodicSlide} />
       </main>
@@ -225,8 +234,8 @@ export function BoardShell({
   if (showEvent && event) {
     return (
       <main
-        className="kiosk h-screen w-screen overflow-hidden"
-        data-idle={idle}
+        className="kiosk h-screen w-screen overflow-hidden bg-bg text-text"
+        {...root}
       >
         <EventPoster event={event} />
       </main>
@@ -235,8 +244,8 @@ export function BoardShell({
 
   return (
     <main
-      className="kiosk flex h-screen w-screen flex-col gap-[1rem] overflow-hidden p-[1.2rem]"
-      data-idle={idle}
+      className="kiosk flex h-screen w-screen flex-col gap-[1rem] overflow-hidden bg-bg p-[1.2rem] text-text"
+      {...root}
     >
       <header className="flex h-[4.6rem] shrink-0 items-center justify-between rounded-lg border-[0.075rem] border-line bg-surface-1 px-[1.6rem]">
         <div className="flex items-center gap-[1rem]">
@@ -259,7 +268,9 @@ export function BoardShell({
               Geen verbinding
             </span>
           )}
-          <span className="eyebrow text-[0.75rem]">Scherm {screenId}</span>
+          <span className="eyebrow text-[0.75rem]">
+            {data.screenName ?? `Scherm ${screenId}`}
+          </span>
           <Clock />
         </div>
       </header>

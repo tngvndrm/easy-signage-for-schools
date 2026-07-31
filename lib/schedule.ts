@@ -64,6 +64,14 @@ export type NowSlot = Slot & {
   progress: number;
 };
 
+/** The name of the break that follows a given period, e.g. "middagpauze". */
+export function breakLabelAfter(period: number): string | null {
+  const brk = SCHEDULE.find(
+    (s) => s.kind === "break" && s.afterPeriod === period,
+  );
+  return brk?.kind === "break" ? brk.label : null;
+}
+
 // Never allowed to throw at module load: this runs client-side (via the lesson
 // marker), and a Chromium without the full timezone database raises on an
 // explicit `timeZone`. An uncaught throw here would crash the board's

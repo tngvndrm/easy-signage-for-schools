@@ -1,5 +1,6 @@
 "use client";
 
+import { breakLabelAfter } from "@/lib/schedule";
 import type { Substitution } from "@/lib/types";
 import { useCurrentSlot } from "./useCurrentSlot";
 
@@ -167,14 +168,11 @@ export function SubstitutionBoard({
 
             return (
               <div key={`${group.period}-${index}`} className="contents">
-                {showPauze && (
+                {showPauze && breakAfterPeriod !== null && (
                   <PauzeDivider
-                    label={
-                      slot?.kind === "break" &&
-                      slot.afterPeriod === breakAfterPeriod
-                        ? slot.label
-                        : "pauze"
-                    }
+                    // Always name the actual break (e.g. "middagpauze"), not
+                    // just while it's live.
+                    label={breakLabelAfter(breakAfterPeriod) ?? "pauze"}
                     now={
                       slot?.kind === "break" &&
                       slot.afterPeriod === breakAfterPeriod

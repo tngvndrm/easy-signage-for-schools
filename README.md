@@ -240,6 +240,28 @@ First and last name are joined for display ("Jan Janssen"). Dates read the same
 forgiving formats as the rest of the sheet (`15/09/2011`, `15/9/2011`,
 `2011-09-15`). A missing tab just leaves the birthday zone empty.
 
+### Per-screen settings
+
+A `Settings` tab lets staff retune each screen live — no code, no redeploy. One
+row per screen (`Display` = 1/2/3):
+
+| Display | Name | Color Scheme | Dark theme start | Light theme start |
+| --- | --- | --- | --- | --- |
+| 1 | Inkomhal | Coral | 18:00 | 8:30 |
+| 2 | Blok B | Gold | 18:00 | 8:30 |
+
+- **Name** shows in the status bar instead of "Scherm 1".
+- **Color Scheme** is the accent — `Coral`, `Gold` or `Blue`.
+- **Dark / Light theme start** flip the board between light and dark at those
+  times (dark from 18:00 until 8:30, here). Leave both blank to stay on the
+  environment default. Evaluated against the host clock and refreshed on the
+  30-second poll, so a screen switches within half a minute of the time.
+- `Turn Off` / `Turn On` are read by the separate TV-power (CEC) feature, not
+  the board.
+
+`?theme=` / `?accent=` on a screen URL still override, for previewing. Changes to
+the tab land on the next poll — no reload needed.
+
 ### Display behaviour
 
 - **Resolution independent.** `html { font-size: calc(100vh / 48) }` and every
@@ -294,6 +316,7 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Evenementen` | `Datum · Tijd · Toon vanaf · Klas · Titel · Synopsis · Poster` |
 | `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
+| `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start` |
 
 Importable CSV starting points for every tab are in
 [`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,
