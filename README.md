@@ -250,6 +250,36 @@ First and last name are joined for display ("Jan Janssen"). Dates read the same
 forgiving formats as the rest of the sheet (`15/09/2011`, `15/9/2011`,
 `2011-09-15`). A missing tab just leaves the birthday zone empty.
 
+### White-labeling (`Style` tab)
+
+Global branding a sister school can change without touching code — a small
+key/value tab plus a colour table:
+
+| | |
+| --- | --- |
+| `Logo` | Drive link to the school's logo (share it "anyone with the link"; falls back to the built-in mark if it can't load) |
+| `School` | Name shown beside the logo |
+| `Font` | See the note below |
+
+| Color Name | Color Code |
+| --- | --- |
+| Coral | EC674A |
+| Gold | D99A22 |
+| Blue | 51A3C4 |
+
+**Only the three base colours are needed** — the board mixes every tint and
+shade it uses (pill and chip backgrounds, the birthday card, hover states) from
+them with CSS `color-mix`, so there's no ramp to hand-enter. The three slots keep
+the names Coral/Gold/Blue (they're what the Settings tab's `Color Scheme` picks
+per screen); a school just recolours them.
+
+**The font is the exception.** For an offline kiosk the display font is bundled
+at build time (self-hosted, so a flaky line can never strip it), which a dynamic
+sheet value can't do. So swapping it for real is a one-line change to the
+`next/font` import in `app/layout.tsx` plus a rebuild. The `Font` cell is honored
+only when it's a plain family *name* that's already available (system-installed);
+a URL is treated as documentation.
+
 ### Per-screen settings
 
 A `Settings` tab lets staff retune each screen live — no code, no redeploy. One
@@ -328,6 +358,7 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
 | `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
+| `Style` | `Logo · School · Font` + a `Color Name / Color Code` table |
 
 Importable CSV starting points for every tab are in
 [`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,

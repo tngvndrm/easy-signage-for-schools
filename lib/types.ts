@@ -1,6 +1,7 @@
 /** Shape of everything the board needs, in one payload. */
 
 import type { Slot } from "./schedule";
+import type { BrandStyle } from "./style";
 
 export type Substitution = {
   /** Display label for the period, e.g. "3" or "1 & 2". */
@@ -83,6 +84,8 @@ export type BoardData = {
   appearance: { theme: "light" | "dark"; accent: "coral" | "gold" | "blue" };
   /** Friendly screen name from the Settings tab, or null to show "Scherm N". */
   screenName: string | null;
+  /** Global branding (logo, colours, font) from the Style tab. */
+  style: BrandStyle;
   substitutions: Substitution[];
   /** The day's timetable — drives the "now" marker and the pauze dividers. */
   schedule: Slot[];

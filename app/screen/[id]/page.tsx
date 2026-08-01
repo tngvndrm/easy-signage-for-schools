@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { BoardShell } from "@/components/BoardShell";
 import { getBoardData } from "@/lib/board";
+import { styleOverridesCss } from "@/lib/style";
 import { ACCENTS, THEMES, type Accent } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -42,13 +43,20 @@ export default async function ScreenPage({
       : undefined,
   });
 
+  // Brand overrides from the Style tab, rendered server-side so there's no flash
+  // of the default palette before the school's colours apply.
+  const overrides = styleOverridesCss(data.style);
+
   return (
-    <BoardShell
-      initial={data}
-      screenId={id}
-      // ?keypanel=1 pins the key panel on, rather than waiting out its cycle.
-      forceKeyPanel={query.keypanel === "1"}
-      forceEvent={query.event === "1"}
-    />
+    <>
+      {overrides && <style dangerouslySetInnerHTML={{ __html: overrides }} />}
+      <BoardShell
+        initial={data}
+        screenId={id}
+        // ?keypanel=1 pins the key panel on, rather than waiting out its cycle.
+        forceKeyPanel={query.keypanel === "1"}
+        forceEvent={query.event === "1"}
+      />
+    </>
   );
 }

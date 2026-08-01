@@ -42,7 +42,9 @@
 
   /* --- Accent (data-accent switches it) --- */
   --accent: var(--brand-coral-500);
-  --accent-hover: #c9583f;
+  /* Derived from the accent, so a school's custom brand colour carries its own
+     hover shade without a second value to enter. */
+  --accent-hover: color-mix(in srgb, var(--accent), black 16%);
   --accent-contrast: #ffffff;
 
   /*
@@ -74,12 +76,10 @@
 
 [data-accent="gold"] {
   --accent: var(--brand-gold-500);
-  --accent-hover: #b8831d;
 }
 
 [data-accent="blue"] {
   --accent: var(--brand-blue-500);
-  --accent-hover: #458ba7;
 }
 
 @theme inline {

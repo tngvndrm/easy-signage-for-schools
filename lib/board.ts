@@ -20,6 +20,7 @@ import {
   themeAt,
 } from "./settings";
 import { isSheetConfigured } from "./sheets";
+import { EMPTY_STYLE, readStyle, type BrandStyle } from "./style";
 import { readSubstitutions } from "./substitutions";
 import { type Accent } from "./theme";
 import type {
@@ -104,11 +105,12 @@ export async function getBoardData(
   let messages: BoardMessage[] = demoMessages;
   let settings: Record<string, ScreenSettings> = demoSettings;
   let schedule: Slot[] = DEFAULT_SCHEDULE;
+  let style: BrandStyle = EMPTY_STYLE;
   let substitutionsUnavailable = false;
   const demo = !isSheetConfigured();
 
   if (!demo) {
-    const [subs, duties, evts, bdays, msgs, sets, sched] =
+    const [subs, duties, evts, bdays, msgs, sets, sched, sty] =
       await Promise.allSettled([
         readSubstitutions(date),
         readKeyDuties(date),
@@ -117,6 +119,7 @@ export async function getBoardData(
         readMessages(date),
         readSettings(),
         readSchedule(),
+        readStyle(),
       ]);
 
     if (subs.status === "fulfilled") {
@@ -167,6 +170,12 @@ export async function getBoardData(
     } else if (sched.status === "rejected") {
       console.error("[board] schedule sheet read failed", sched.reason);
     }
+
+    // Style failing just falls back to the built-in Steinerschool branding.
+    style = sty.status === "fulfilled" ? sty.value : EMPTY_STYLE;
+    if (sty.status === "rejected") {
+      console.error("[board] style sheet read failed", sty.reason);
+    }
   }
 
   // Resolve this screen's appearance: query override > sheet setting > env.
@@ -208,6 +217,7 @@ export async function getBoardData(
     dateLabel: dateLabel(options.date ? new Date(`${options.date}T12:00:00`) : now),
     appearance: { theme, accent },
     screenName: set.name,
+    style,
     substitutions,
     schedule,
     messages: rotation,

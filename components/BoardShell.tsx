@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BigSlide } from "./BigSlide";
 import { BirthdayZone } from "./BirthdayZone";
-import { BrandMark } from "./BrandMark";
+import { LogoMark } from "./LogoMark";
 import { Clock } from "./Clock";
 import { EventPoster } from "./EventPoster";
 import { KeyPanel } from "./KeyPanel";
@@ -249,9 +249,14 @@ export function BoardShell({
     >
       <header className="flex h-[4.6rem] shrink-0 items-center justify-between rounded-lg border-[0.075rem] border-line bg-surface-1 px-[1.6rem]">
         <div className="flex items-center gap-[1rem]">
-          <BrandMark className="h-[2.6rem] w-auto" />
+          <LogoMark
+            logoUrl={data.style.logoUrl}
+            className="h-[2.6rem] w-auto"
+          />
           <div className="flex flex-col justify-center leading-none">
-            <span className="eyebrow text-[0.75rem]">Steinerschool Gent</span>
+            <span className="eyebrow text-[0.75rem]">
+              {data.style.schoolName ?? "Steinerschool Gent"}
+            </span>
             <span className="font-display text-[1.9rem] font-bold leading-tight">
               {data.dateLabel}
             </span>
