@@ -259,7 +259,6 @@ key/value tab plus a colour table:
 | --- | --- |
 | `Logo` | Drive link to the school's logo (share it "anyone with the link"; falls back to the built-in mark if it can't load) |
 | `School` | Name shown beside the logo |
-| `Font` | See the note below |
 
 | Color Name | Color Code |
 | --- | --- |
@@ -273,12 +272,11 @@ them with CSS `color-mix`, so there's no ramp to hand-enter. The three slots kee
 the names Coral/Gold/Blue (they're what the Settings tab's `Color Scheme` picks
 per screen); a school just recolours them.
 
-**The font is the exception.** For an offline kiosk the display font is bundled
-at build time (self-hosted, so a flaky line can never strip it), which a dynamic
-sheet value can't do. So swapping it for real is a one-line change to the
-`next/font` import in `app/layout.tsx` plus a rebuild. The `Font` cell is honored
-only when it's a plain family *name* that's already available (system-installed);
-a URL is treated as documentation.
+**Changing the font is a build-time step, not a sheet setting.** An offline
+kiosk needs its display font bundled at build (self-hosted, so a flaky line can
+never strip it), so it isn't something a live sheet value can do. Swap it by
+editing the one `next/font` import in `app/layout.tsx` and rebuilding — the point
+where a sister school forks and deploys anyway.
 
 ### Per-screen settings
 
@@ -358,7 +356,7 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
 | `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
-| `Style` | `Logo · School · Font` + a `Color Name / Color Code` table |
+| `Style` | `Logo · School` + a `Color Name / Color Code` table |
 
 Importable CSV starting points for every tab are in
 [`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,

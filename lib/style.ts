@@ -10,15 +10,12 @@ export type BrandStyle = {
   logoUrl: string | null;
   /** School name shown beside the logo; null keeps the default. */
   schoolName: string | null;
-  /** A font-family *name* to try; real font swaps are a build-time choice. */
-  fontFamily: string | null;
   colors: Partial<Record<"coral" | "gold" | "blue", string>>;
 };
 
 export const EMPTY_STYLE: BrandStyle = {
   logoUrl: null,
   schoolName: null,
-  fontFamily: null,
   colors: {},
 };
 
@@ -58,7 +55,6 @@ export async function readStyle(): Promise<BrandStyle> {
     if (!value) continue;
 
     if (key === "logo") style.logoUrl = directImageUrl(value) || null;
-    else if (key === "font") style.fontFamily = value;
     else if (key === "school" || key === "schoolnaam" || key === "naam") {
       style.schoolName = value;
     } else if (key === "coral" || key === "gold" || key === "blue") {
@@ -72,9 +68,8 @@ export async function readStyle(): Promise<BrandStyle> {
 /**
  * CSS that overrides the brand tokens from the sheet. Only the three base
  * colours are given; the 100/300/700/900 steps are mixed toward white and black
- * so pills, chips and shades all follow. A font *name* is applied as a soft
- * override (it falls back to the bundled Averia if that family isn't present); a
- * font *URL* is ignored here — see the README on swapping the font for real.
+ * so pills, chips and shades all follow. (The display font is a build-time
+ * choice — see the README — not a sheet value.)
  */
 export function styleOverridesCss(style: BrandStyle): string {
   const decls: string[] = [];
@@ -88,9 +83,6 @@ export function styleOverridesCss(style: BrandStyle): string {
       `--brand-${key}-700:color-mix(in srgb, ${hex} 72%, black)`,
       `--brand-${key}-900:color-mix(in srgb, ${hex} 42%, black)`,
     );
-  }
-  if (style.fontFamily && !/^https?:\/\//i.test(style.fontFamily)) {
-    decls.push(`--font-averia:${JSON.stringify(style.fontFamily)}`);
   }
   return decls.length > 0 ? `:root{${decls.join(";")}}` : "";
 }
