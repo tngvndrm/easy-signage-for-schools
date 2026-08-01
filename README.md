@@ -377,10 +377,6 @@ reliably in the Pi's Chromium.
 
 ## Not built yet
 
-- **Offline cold boot.** A screen that boots while the host is down gets
-  Chromium's error page; `localStorage` only rescues a page that has loaded at
-  least once. A service worker would cache the shell and last board. This is the
-  one gap worth closing before relying on the screens daily.
 - **TV on/off scheduling** (HDMI-CEC) — tracked separately.
 - **OneRoster birthdays** — deferred in the spec; moot now that the birthday
   list lives in the sheet.

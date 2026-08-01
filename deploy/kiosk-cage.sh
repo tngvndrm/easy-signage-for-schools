@@ -30,6 +30,18 @@ if [ "${1:-}" = "--inner" ]; then
     (sleep 4; wlrctl pointer move 100000 100000) >/dev/null 2>&1 &
   fi
 
+  # Boot onto a local splash page (always loads, it's on disk) that forwards to
+  # the board once the host answers. So a screen that boots while the host is
+  # still down shows a branded "verbinden…" screen and self-heals, instead of
+  # Chromium's connection-refused error page. If the splash file is missing for
+  # any reason, fall back to loading the board directly.
+  DIR="$(cd "$(dirname "$0")" && pwd)"
+  if [ -f "${DIR}/splash.html" ]; then
+    START_URL="file://${DIR}/splash.html?board=${BOARD_URL}"
+  else
+    START_URL="${BOARD_URL}"
+  fi
+
   # --disable-features=Translate,TranslateUI belt-and-suspenders with the page's
   # own notranslate meta, so the "Translate?" menu never appears.
   exec chromium \
@@ -41,7 +53,7 @@ if [ "${1:-}" = "--inner" ]; then
     --disable-features=Translate,TranslateUI \
     --check-for-update-interval=31536000 \
     --autoplay-policy=no-user-gesture-required \
-    "$BOARD_URL"
+    "$START_URL"
 fi
 
 # Outer: hand cage this same script's inner branch as its client. SCREEN and

@@ -157,8 +157,12 @@ correctly. If you test against a laptop before the host exists, run
 | Host down or rebooting | Screens keep showing their last board from `localStorage`, and raise "Geen verbinding" after five minutes. |
 | One display Pi down | The other two are unaffected — they only depend on the host. |
 | Power cut | Host and screens come back on their own; `Restart=always` and the kiosk autostart handle it. |
+| Screen boots while host is down | The screen shows a branded "verbinden…" splash (served from its own disk) and forwards to the board the moment the host answers — no error page, and it lands on fresh data. |
 
-The gap worth knowing about: a screen that boots while the **host** is down gets
-Chromium's error page, because `localStorage` only helps once the page has
-loaded at least once. A service worker fixes that and is still on the
-not-built list.
+### Power resilience (recommended)
+
+The one scenario the splash smooths over is a building-wide power cut where a
+display Pi boots faster than the host. To stop it happening at all, put a small
+UPS on the **host** (and ideally the network switch): the host then rides through
+short blips and outlasts the displays' boot, so they rarely meet a dead host. A
+~€40 mini-UPS covers it. The splash handles the rest.
