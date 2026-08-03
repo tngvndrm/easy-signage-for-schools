@@ -16,6 +16,7 @@ export async function GET(request: Request) {
   const data = await getBoardData({
     previewTakeover: params.get("takeover") === "1",
     previewEvent: params.get("event") === "1",
+    previewOccasion: params.get("occasion") === "1",
     date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined,
     keyLimit: Number.isFinite(keyLimit) ? keyLimit : undefined,
     screenId: screen ?? undefined,

@@ -61,6 +61,29 @@ export type KeyDuty = {
   overdue: boolean;
 };
 
+export type SpecialOccasionEntry = {
+  /** Display string e.g. "09:30". */
+  timeFrom: string;
+  /** Display string e.g. "11:00". Absent for open-ended items. */
+  timeTo?: string;
+  /** Minutes since midnight — used by the current-time indicator. */
+  timeFromMinutes: number;
+  timeToMinutes?: number;
+  activity: string;
+  supervisor: string;
+  info?: string;
+  location?: string;
+};
+
+export type SpecialOccasion = {
+  /** ISO yyyy-mm-dd of the event itself. */
+  eventDate: string;
+  /** Human-readable date, pre-formatted server-side. */
+  eventDateLabel: string;
+  title: string;
+  entries: SpecialOccasionEntry[];
+};
+
 export type EventItem = {
   id: string;
   /** The class performing, e.g. "Klas 100". */
@@ -99,6 +122,12 @@ export type BoardData = {
   permanentSlides: BoardMessage[];
   /** In-window "Yes" Big Slides — shown full-screen in periodic bursts. */
   periodicSlides: BoardMessage[];
+  /** Special occasion boards active today — no BigSlide, replace SubstitutionBoard. */
+  specialOccasions: SpecialOccasion[];
+  /** Permanent special occasions — always in the main area for their window. */
+  permanentSpecialOccasions: SpecialOccasion[];
+  /** Periodic special occasions — appear in the main area in interrupt bursts. */
+  periodicSpecialOccasions: SpecialOccasion[];
   /** Server timestamp (ms) of this payload; used for the staleness indicator. */
   fetchedAt: number;
   /** True when the payload came from mock data, not a real Sheet. */
