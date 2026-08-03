@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { parseTimeOverride } from "@/lib/schedule";
-import type { SpecialOccasion } from "@/lib/types";
+import type { SpecialOccasion, SpecialOccasionEntry } from "@/lib/types";
+import { Clock } from "./Clock";
 
 const TICK_MS = 10_000;
 const MIN_SCALE = 0.55;
@@ -50,12 +51,47 @@ function HeaderRow() {
   );
 }
 
+/** A break in the day — rendered as a dashed divider, like the substitutions board. */
+function isPause(activity: string): boolean {
+  const a = activity.toLowerCase();
+  return a.includes("pauze") || a.includes("speeltijd");
+}
+
+function PauzeDivider({
+  entry,
+  now,
+}: {
+  entry: SpecialOccasionEntry;
+  now: boolean;
+}) {
+  const line = now ? "border-accent" : "border-line";
+  const time = entry.timeTo
+    ? `${entry.timeFrom} – ${entry.timeTo}`
+    : entry.timeFrom;
+  const label = [entry.activity, time].filter(Boolean).join(" · ");
+  return (
+    <div className="flex shrink-0 items-center gap-[1rem] px-[1.8rem] py-[0.4rem]">
+      <span className={`h-0 flex-1 border-t-[0.1rem] border-dashed ${line}`} />
+      <span
+        className={`eyebrow text-[0.8rem] ${now ? "font-bold text-accent" : ""}`}
+      >
+        {label}
+      </span>
+      <span className={`h-0 flex-1 border-t-[0.1rem] border-dashed ${line}`} />
+    </div>
+  );
+}
+
 export function SpecialOccasionBoard({
   occasion,
   comfortableRows = 7,
+  fullscreen = false,
 }: {
   occasion: SpecialOccasion;
   comfortableRows?: number;
+  /** Full-screen (Permanent / Yes): the global header is gone, so the board
+   * carries the date at header size and shows the clock. */
+  fullscreen?: boolean;
 }) {
   const [nowIndex, setNowIndex] = useState(-1);
   const [nowProgress, setNowProgress] = useState(0);
@@ -98,12 +134,21 @@ export function SpecialOccasionBoard({
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-[0.075rem] border-line bg-surface-1 py-[1.2rem]">
       <div className="flex shrink-0 items-baseline justify-between px-[1.8rem] pb-[0.9rem]">
-        <h2 className="font-display text-[2rem] font-bold leading-none">
-          {occasion.title}
-        </h2>
-        <span className="text-[1rem] font-bold text-muted">
-          {occasion.eventDateLabel}
-        </span>
+        <div className="flex items-baseline gap-[1rem]">
+          <h2 className="font-display text-[2rem] font-bold leading-none">
+            {occasion.title}
+          </h2>
+          <span
+            className={
+              fullscreen
+                ? "font-display text-[1.9rem] font-bold leading-none text-muted"
+                : "text-[1rem] font-bold text-muted"
+            }
+          >
+            {occasion.eventDateLabel}
+          </span>
+        </div>
+        {fullscreen && <Clock />}
       </div>
 
       <HeaderRow />
@@ -121,13 +166,27 @@ export function SpecialOccasionBoard({
             fontSize: `${rowScale(entries.length, comfortableRows)}rem`,
           }}
         >
-          {entries.map((entry, index) => {
-            const isNow = index === nowIndex;
-            return (
+          {(() => {
+            // Pauses render as dividers, so stripe only the data rows — a
+            // divider between two rows must not throw off the alternating bg.
+            let rowIndex = -1;
+            return entries.map((entry, index) => {
+              const isNow = index === nowIndex;
+              if (isPause(entry.activity)) {
+                return (
+                  <PauzeDivider
+                    key={`pauze-${entry.timeFrom}-${index}`}
+                    entry={entry}
+                    now={isNow}
+                  />
+                );
+              }
+              rowIndex += 1;
+              return (
               <div
                 key={`${entry.timeFrom}-${index}`}
                 className={`grid flex-1 items-center gap-x-[1rem] px-[1.1rem] ${
-                  index % 2 === 1 ? "rounded-md bg-surface-2" : ""
+                  rowIndex % 2 === 1 ? "rounded-md bg-surface-2" : ""
                 }`}
                 style={{ gridTemplateColumns: COLUMNS }}
               >
@@ -162,8 +221,9 @@ export function SpecialOccasionBoard({
                   {entry.location || "—"}
                 </span>
               </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       )}
     </section>
