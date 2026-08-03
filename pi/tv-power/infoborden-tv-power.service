@@ -1,0 +1,14 @@
+[Unit]
+Description=Infoborden TV power schedule
+Documentation=https://github.com/-/Signage/blob/main/pi/tv-power/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/infoborden-tv-power run
+# CEC needs the video group to reach /dev/cec0; the Pi's CEC device is not
+# world-writable, so this runs as root rather than as the kiosk user.
+User=root
+StandardOutput=journal
+StandardError=journal
