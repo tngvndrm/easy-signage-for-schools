@@ -9,6 +9,7 @@ import { EventPoster } from "./EventPoster";
 import { KeyPanel } from "./KeyPanel";
 import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
+import { SpecialOccasionBoard } from "./SpecialOccasionBoard";
 import { SubstitutionBoard } from "./SubstitutionBoard";
 import { useIdlePointer } from "./useIdlePointer";
 import type { BoardData } from "@/lib/types";
@@ -40,7 +41,7 @@ const BIG_SLIDE_FOR_MS = 20_000;
 const STALE_MS = 5 * 60_000;
 const CACHE_KEY = "infoborden:board";
 
-type Interrupt = "keys" | "event" | "bigslide";
+type Interrupt = "keys" | "event" | "bigslide" | "specialoccasion";
 
 function readCache(): BoardData | null {
   try {
@@ -64,6 +65,7 @@ export function BoardShell({
   screenId,
   forceKeyPanel = false,
   forceEvent = false,
+  forceOccasion = false,
 }: {
   initial: BoardData;
   screenId: string;
@@ -71,6 +73,8 @@ export function BoardShell({
   forceKeyPanel?: boolean;
   /** Preview: hold the event poster on screen instead of cycling it. */
   forceEvent?: boolean;
+  /** Preview: hold the special occasion board on screen instead of cycling it. */
+  forceOccasion?: boolean;
 }) {
   const [data, setData] = useState<BoardData>(initial);
   const [stale, setStale] = useState(false);
@@ -79,6 +83,7 @@ export function BoardShell({
   const [showing, setShowing] = useState<Interrupt | null>(null);
   const [permIndex, setPermIndex] = useState(0);
   const [periodicIndex, setPeriodicIndex] = useState(0);
+  const [periodicOccasionIndex, setPeriodicOccasionIndex] = useState(0);
 
   const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
   const event = data.events[0] ?? null;
@@ -114,6 +119,7 @@ export function BoardShell({
   if (manyKeys) queue.push("keys");
   if (event) queue.push("event");
   if (periodicSlides.length) queue.push("bigslide");
+  if (data.periodicSpecialOccasions.length) queue.push("specialoccasion");
   const queueKey = queue.join(",");
 
   useEffect(() => {
@@ -129,6 +135,7 @@ export function BoardShell({
       setShowing(next);
       // Advance through the periodic slides so each burst shows the next one.
       if (next === "bigslide") setPeriodicIndex((i) => i + 1);
+      if (next === "specialoccasion") setPeriodicOccasionIndex((i) => i + 1);
       hide = setTimeout(
         () => setShowing(null),
         next === "keys"
@@ -153,11 +160,31 @@ export function BoardShell({
       ? periodicSlides[periodicIndex % periodicSlides.length]
       : null;
 
+  // Resolve which special occasion (if any) occupies the main area.
+  const periodicOccasion =
+    data.periodicSpecialOccasions.length > 0 && showing === "specialoccasion"
+      ? data.periodicSpecialOccasions[
+          periodicOccasionIndex % data.periodicSpecialOccasions.length
+        ]
+      : null;
+  const activeOccasion =
+    data.permanentSpecialOccasions[0] ??
+    periodicOccasion ??
+    data.specialOccasions[0] ??
+    null;
+  // forceOccasion makes any available occasion visible for preview.
+  const displayOccasion =
+    activeOccasion ??
+    (forceOccasion
+      ? (data.periodicSpecialOccasions[0] ?? null)
+      : null);
+
   // Past this many substitutions the top-65%-tall board gets cramped, so the
   // layout reflows to give it the full height (see the two return branches).
-  // Never while the key panel is interrupting — that owns the full main area.
+  // Never while the key panel or a special occasion is in the main area.
   const wideSubs =
     !showKeys &&
+    !displayOccasion &&
     !data.substitutionsUnavailable &&
     data.substitutions.length > SUBS_WIDE_THRESHOLD;
 
@@ -307,7 +334,9 @@ export function BoardShell({
         </div>
       ) : (
         <>
-          {showKeys ? (
+          {displayOccasion ? (
+            <SpecialOccasionBoard occasion={displayOccasion} />
+          ) : showKeys ? (
             <KeyPanel duties={data.keys} />
           ) : (
             <SubstitutionBoard

@@ -4,6 +4,7 @@ import type {
   BoardMessage,
   EventItem,
   KeyDuty,
+  SpecialOccasion,
   Substitution,
 } from "./types";
 
@@ -96,6 +97,71 @@ export const demoEvents: EventItem[] = [
     posterUrl: "/demo-poster.svg",
   },
 ];
+
+/** Shown when `?occasion=1` is in the URL, to preview the special occasion board. */
+export const demoSpecialOccasion: SpecialOccasion = {
+  eventDate: "2026-08-03",
+  eventDateLabel: "Maandag 3 augustus 2026",
+  title: "Sportdag",
+  entries: [
+    {
+      timeFrom: "08:00",
+      timeTo: "09:30",
+      timeFromMinutes: 8 * 60,
+      timeToMinutes: 9 * 60 + 30,
+      activity: "Opening",
+      supervisor: "De Smet",
+      location: "Aula",
+    },
+    {
+      timeFrom: "09:30",
+      timeTo: "11:00",
+      timeFromMinutes: 9 * 60 + 30,
+      timeToMinutes: 11 * 60,
+      activity: "100m loop",
+      supervisor: "Van den Berg",
+      location: "Sportveld",
+    },
+    {
+      timeFrom: "11:00",
+      timeTo: "11:15",
+      timeFromMinutes: 11 * 60,
+      timeToMinutes: 11 * 60 + 15,
+      activity: "Pauze",
+      supervisor: "",
+      location: "Cafetaria",
+    },
+    {
+      timeFrom: "11:15",
+      timeTo: "12:30",
+      timeFromMinutes: 11 * 60 + 15,
+      timeToMinutes: 12 * 60 + 30,
+      activity: "Estafette",
+      supervisor: "Jansen",
+      info: "Groepen A–D",
+      location: "Sportveld",
+    },
+    {
+      timeFrom: "12:30",
+      timeTo: "13:30",
+      timeFromMinutes: 12 * 60 + 30,
+      timeToMinutes: 13 * 60 + 30,
+      activity: "Lunch & vrij spel",
+      supervisor: "",
+      info: "Meegebracht",
+      location: "Terras",
+    },
+    {
+      timeFrom: "13:30",
+      timeTo: "15:00",
+      timeFromMinutes: 13 * 60 + 30,
+      timeToMinutes: 15 * 60,
+      activity: "Slotsprint & prijsuitreiking",
+      supervisor: "Directie",
+      location: "Sportveld",
+    },
+  ],
+};
 
 /** Shown full-screen by `?takeover=1`, to preview the Big Slide layout. */
 export const demoBigSlidePreview: BoardMessage = {

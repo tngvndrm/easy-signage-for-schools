@@ -5,6 +5,7 @@ import {
   demoKeyDuties,
   demoMessages,
   demoSettings,
+  demoSpecialOccasion,
   demoSubstitutions,
 } from "./demo-data";
 import { readBirthdays } from "./birthdays";
@@ -21,6 +22,7 @@ import {
 } from "./settings";
 import { isSheetConfigured } from "./sheets";
 import { EMPTY_STYLE, readStyle, type BrandStyle } from "./style";
+import { readSpecialOccasions } from "./specialOccasions";
 import { readSubstitutions } from "./substitutions";
 import { type Accent } from "./theme";
 import type {
@@ -29,6 +31,7 @@ import type {
   BoardMessage,
   EventItem,
   KeyDuty,
+  SpecialOccasion,
   Substitution,
 } from "./types";
 
@@ -88,6 +91,8 @@ export async function getBoardData(
     date?: string;
     /** Preview the event poster even when no event is scheduled. */
     previewEvent?: boolean;
+    /** Preview the special occasion board even when none is scheduled. */
+    previewOccasion?: boolean;
     /** Which screen (1/2/3) — selects its row in the Settings tab. */
     screenId?: string;
     /** Query overrides that beat the sheet: ?theme=, ?accent=. */
@@ -107,10 +112,13 @@ export async function getBoardData(
   let schedule: Slot[] = DEFAULT_SCHEDULE;
   let style: BrandStyle = EMPTY_STYLE;
   let substitutionsUnavailable = false;
+  let specialOccasions: SpecialOccasion[] = [];
+  let periodicSpecialOccasions: SpecialOccasion[] = [];
+  let permanentSpecialOccasions: SpecialOccasion[] = [];
   const demo = !isSheetConfigured();
 
   if (!demo) {
-    const [subs, duties, evts, bdays, msgs, sets, sched, sty] =
+    const [subs, duties, evts, bdays, msgs, sets, sched, sty, occasions] =
       await Promise.allSettled([
         readSubstitutions(date),
         readKeyDuties(date),
@@ -120,6 +128,7 @@ export async function getBoardData(
         readSettings(),
         readSchedule(),
         readStyle(),
+        readSpecialOccasions(date),
       ]);
 
     if (subs.status === "fulfilled") {
@@ -176,6 +185,14 @@ export async function getBoardData(
     if (sty.status === "rejected") {
       console.error("[board] style sheet read failed", sty.reason);
     }
+
+    if (occasions.status === "fulfilled") {
+      specialOccasions = occasions.value.regular;
+      periodicSpecialOccasions = occasions.value.periodic;
+      permanentSpecialOccasions = occasions.value.permanent;
+    } else {
+      console.error("[board] special occasions sheet read failed", occasions.reason);
+    }
   }
 
   // Resolve this screen's appearance: query override > sheet setting > env.
@@ -198,6 +215,9 @@ export async function getBoardData(
 
   // Show a sample so a layout can be reviewed before real data exists.
   if (options.previewEvent && events.length === 0) events = demoEvents;
+  if (options.previewOccasion && specialOccasions.length === 0 && periodicSpecialOccasions.length === 0 && permanentSpecialOccasions.length === 0) {
+    specialOccasions = [demoSpecialOccasion];
+  }
 
   // Big Slides take over the whole screen, so they're pulled out of the small
   // rotation: "permanent" holds the screen, "periodic" bursts onto it.
@@ -226,6 +246,9 @@ export async function getBoardData(
     events,
     permanentSlides,
     periodicSlides,
+    specialOccasions,
+    periodicSpecialOccasions,
+    permanentSpecialOccasions,
     fetchedAt: now.getTime(),
     demo,
     substitutionsUnavailable,
