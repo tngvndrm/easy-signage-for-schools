@@ -1,0 +1,407 @@
+#!/usr/bin/env python3
+"""Drive the attached TV's power state from a schedule, over HDMI-CEC.
+
+Runs once per invocation (a systemd timer fires it every minute), works out
+whether the TV should be on or off right now, and only talks to the TV when
+something actually needs to change.
+
+Schedule precedence: server (cached) -> local file -> "always on".
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+from datetime import date as Date
+from datetime import datetime, time as Time, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+ETC = os.environ.get("INFOBORDEN_ETC", "/etc/infoborden")
+VAR = os.environ.get("INFOBORDEN_VAR", "/var/lib/infoborden")
+
+CONFIG_PATH = os.environ.get("INFOBORDEN_TV_CONFIG", f"{ETC}/tv-power.conf")
+LOCAL_SCHEDULE_PATH = f"{ETC}/tv-power-schedule.json"
+CACHE_PATH = f"{VAR}/tv-power-schedule.cache.json"
+STATE_PATH = f"{VAR}/tv-power-state.json"
+
+DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+DEFAULTS = {
+    "SCREEN_ID": "1",
+    "SCHEDULE_URL": "",
+    "SCHEDULE_TOKEN": "",
+    "SCHEDULE_TTL": "600",
+    "TIMEZONE": "",
+    "CEC_BACKEND": "auto",
+    "CEC_DEVICE": "/dev/cec0",
+    "CEC_TARGET": "0",
+    "CEC_TIMEOUT": "20",
+    "CEC_SET_ACTIVE_SOURCE": "1",
+    "REASSERT_SECONDS": "900",
+    "FALLBACK_ON_CMD": "",
+    "FALLBACK_OFF_CMD": "",
+}
+
+# Used only when there is no server schedule and no local file: better to leave
+# a school hallway screen on than to have it mysteriously dark.
+FALLBACK_SCHEDULE = {"version": 1, "weekly": {k: [{"on": "00:00", "off": "23:59"}] for k in DAY_KEYS}}
+
+
+def log(msg):
+    print(msg, flush=True)
+
+
+def warn(msg):
+    print(msg, file=sys.stderr, flush=True)
+
+
+# --------------------------------------------------------------------------- config
+
+
+def load_config():
+    cfg = dict(DEFAULTS)
+    try:
+        with open(CONFIG_PATH) as fh:
+            for raw in fh:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                cfg[key.strip()] = value.strip().strip('"').strip("'")
+    except FileNotFoundError:
+        warn(f"no config at {CONFIG_PATH}, using defaults")
+    # Environment wins, so systemd overrides and one-off tests are easy.
+    for key in cfg:
+        if key in os.environ:
+            cfg[key] = os.environ[key]
+    return cfg
+
+
+def tzinfo_for(cfg, schedule):
+    name = cfg.get("TIMEZONE") or schedule.get("timezone") or ""
+    if not name:
+        return datetime.now().astimezone().tzinfo
+    try:
+        return ZoneInfo(name)
+    except ZoneInfoNotFoundError:
+        warn(f"unknown timezone {name!r}, falling back to system local time")
+        return datetime.now().astimezone().tzinfo
+
+
+# --------------------------------------------------------------------------- schedule
+
+
+def read_json(path):
+    with open(path) as fh:
+        return json.load(fh)
+
+
+def write_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.tmp"
+    with open(tmp, "w") as fh:
+        json.dump(data, fh, indent=2)
+    os.replace(tmp, path)
+
+
+def fetch_schedule(cfg):
+    """Pull the schedule from the server. Returns None if it can't be had."""
+    url = cfg["SCHEDULE_URL"]
+    if not url:
+        return None
+    url = url.replace("{screen}", cfg["SCREEN_ID"])
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    if cfg["SCHEDULE_TOKEN"]:
+        req.add_header("Authorization", f"Bearer {cfg['SCHEDULE_TOKEN']}")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            schedule = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        warn(f"schedule fetch failed ({exc}); using cached copy")
+        return None
+    validate_schedule(schedule)
+    write_json(CACHE_PATH, {"fetched_at": time.time(), "schedule": schedule})
+    log(f"fetched schedule from {url}")
+    return schedule
+
+
+def validate_schedule(schedule):
+    if not isinstance(schedule, dict):
+        raise ValueError("schedule must be an object")
+    for day, windows in (schedule.get("weekly") or {}).items():
+        if day not in DAY_KEYS:
+            raise ValueError(f"unknown weekly key {day!r}")
+        _validate_windows(windows, day)
+    for exc in schedule.get("exceptions") or []:
+        Date.fromisoformat(exc["date"])
+        _validate_windows(exc.get("windows") or [], exc["date"])
+
+
+def _validate_windows(windows, label):
+    if not isinstance(windows, list):
+        raise ValueError(f"windows for {label} must be a list")
+    for window in windows:
+        parse_hhmm(window["on"])
+        parse_hhmm(window["off"])
+
+
+def parse_hhmm(value):
+    hours, _, minutes = str(value).partition(":")
+    return Time(int(hours), int(minutes))
+
+
+def load_schedule(cfg, allow_fetch=True):
+    """Server (refreshed if stale) -> cache -> local file -> always-on."""
+    cached = None
+    try:
+        cached = read_json(CACHE_PATH)
+    except (FileNotFoundError, ValueError):
+        pass
+
+    stale = cached is None or (time.time() - cached.get("fetched_at", 0)) > int(cfg["SCHEDULE_TTL"])
+    if allow_fetch and cfg["SCHEDULE_URL"] and stale:
+        fresh = fetch_schedule(cfg)
+        if fresh is not None:
+            return fresh, "server"
+    if cached:
+        return cached["schedule"], "cache"
+
+    try:
+        schedule = read_json(LOCAL_SCHEDULE_PATH)
+        validate_schedule(schedule)
+        return schedule, "local file"
+    except FileNotFoundError:
+        pass
+    except ValueError as exc:
+        warn(f"{LOCAL_SCHEDULE_PATH} is invalid ({exc})")
+
+    warn("no schedule available; defaulting to always on")
+    return FALLBACK_SCHEDULE, "fallback"
+
+
+def windows_for(schedule, day):
+    iso = day.isoformat()
+    for exc in schedule.get("exceptions") or []:
+        if exc.get("date") == iso:
+            return exc.get("windows") or []
+    return (schedule.get("weekly") or {}).get(DAY_KEYS[day.weekday()], [])
+
+
+def should_be_on(schedule, now):
+    """True if `now` falls inside a window. Windows may cross midnight."""
+    today = now.date()
+    for day in (today - timedelta(days=1), today):
+        for window in windows_for(schedule, day):
+            start = datetime.combine(day, parse_hhmm(window["on"]), tzinfo=now.tzinfo)
+            end = datetime.combine(day, parse_hhmm(window["off"]), tzinfo=now.tzinfo)
+            if end <= start:
+                end += timedelta(days=1)
+            if start <= now < end:
+                return True
+    return False
+
+
+# --------------------------------------------------------------------------- CEC
+
+
+def which(binary):
+    return subprocess.run(["which", binary], capture_output=True, text=True).returncode == 0
+
+
+def resolve_backend(cfg):
+    backend = cfg["CEC_BACKEND"]
+    if backend != "auto":
+        return backend
+    if which("cec-client"):
+        return "cec-client"
+    if which("cec-ctl"):
+        return "cec-ctl"
+    return "none"
+
+
+def run(cmd, cfg, stdin=None):
+    try:
+        return subprocess.run(
+            cmd,
+            input=stdin,
+            capture_output=True,
+            text=True,
+            timeout=int(cfg["CEC_TIMEOUT"]),
+        )
+    except subprocess.TimeoutExpired:
+        warn(f"timed out: {' '.join(cmd)}")
+        return None
+
+
+def cec_command(cfg, action):
+    """action is 'on' or 'off'. Returns True if the command was sent cleanly."""
+    backend = resolve_backend(cfg)
+    target = cfg["CEC_TARGET"]
+
+    if backend == "cec-client":
+        keyword = "on" if action == "on" else "standby"
+        result = run(["cec-client", "-s", "-d", "1"], cfg, stdin=f"{keyword} {target}\n")
+        if result is None:
+            return False
+        if action == "on" and cfg["CEC_SET_ACTIVE_SOURCE"] == "1":
+            run(["cec-client", "-s", "-d", "1"], cfg, stdin="as\n")
+        return result.returncode == 0
+
+    if backend == "cec-ctl":
+        device = cfg["CEC_DEVICE"]
+        # Registering as a playback device is idempotent and cheap; without it
+        # the adapter has no logical address and messages go nowhere.
+        run(["cec-ctl", "-d", device, "--playback", "--osd-name", "Infoborden"], cfg)
+        verb = "--image-view-on" if action == "on" else "--standby"
+        result = run(["cec-ctl", "-d", device, "--to", target, verb], cfg)
+        if result is None:
+            return False
+        if action == "on" and cfg["CEC_SET_ACTIVE_SOURCE"] == "1":
+            run(["cec-ctl", "-d", device, "--active-source", "phys-addr=0.0.0.0"], cfg)
+        return result.returncode == 0
+
+    warn("no CEC backend found (install cec-utils or v4l-utils)")
+    return False
+
+
+def cec_power_state(cfg):
+    """Ask the TV what it thinks its power state is: 'on', 'off', or None."""
+    backend = resolve_backend(cfg)
+    target = cfg["CEC_TARGET"]
+
+    if backend == "cec-client":
+        result = run(["cec-client", "-s", "-d", "1"], cfg, stdin=f"pow {target}\n")
+        haystack = (result.stdout if result else "") or ""
+    elif backend == "cec-ctl":
+        result = run(
+            ["cec-ctl", "-d", cfg["CEC_DEVICE"], "--to", target, "--give-device-power-status"],
+            cfg,
+        )
+        haystack = (result.stdout if result else "") or ""
+    else:
+        return None
+
+    lowered = haystack.lower()
+    if "power status: on" in lowered or "pwr-state: on" in lowered:
+        return "on"
+    if "standby" in lowered:
+        return "off"
+    return None
+
+
+def apply_state(cfg, desired, dry_run=False):
+    if dry_run:
+        log(f"[dry-run] would turn TV {desired}")
+        return True
+    ok = cec_command(cfg, desired)
+    if not ok:
+        warn(f"CEC {desired} failed")
+    fallback = cfg["FALLBACK_ON_CMD"] if desired == "on" else cfg["FALLBACK_OFF_CMD"]
+    if fallback:
+        subprocess.run(fallback, shell=True)
+    log(f"TV -> {desired}" + ("" if ok else " (CEC reported failure)"))
+    return ok
+
+
+# --------------------------------------------------------------------------- state
+
+
+def load_state():
+    try:
+        return read_json(STATE_PATH)
+    except (FileNotFoundError, ValueError):
+        return {}
+
+
+def save_state(state):
+    try:
+        write_json(STATE_PATH, state)
+    except OSError as exc:
+        warn(f"could not write state file: {exc}")
+
+
+# --------------------------------------------------------------------------- commands
+
+
+def cmd_run(cfg, args):
+    schedule, source = load_schedule(cfg)
+    now = datetime.now(tzinfo_for(cfg, schedule))
+    desired = "on" if should_be_on(schedule, now) else "off"
+
+    state = load_state()
+    last = state.get("desired")
+    reassert_after = int(cfg["REASSERT_SECONDS"])
+    age = time.time() - state.get("applied_at", 0)
+
+    if desired != last:
+        log(f"{now:%Y-%m-%d %H:%M} schedule ({source}) says {desired}, was {last or 'unknown'}")
+        applied = apply_state(cfg, desired, args.dry_run)
+    elif reassert_after and age > reassert_after:
+        # Someone may have hit the remote. Only re-send if the TV disagrees.
+        actual = cec_power_state(cfg)
+        if actual is not None and actual != desired:
+            log(f"TV is {actual} but should be {desired}; re-asserting")
+            applied = apply_state(cfg, desired, args.dry_run)
+        else:
+            applied = True
+    else:
+        return 0
+
+    if not args.dry_run:
+        save_state({"desired": desired, "applied_at": time.time(), "ok": applied})
+    return 0
+
+
+def cmd_status(cfg, args):
+    schedule, source = load_schedule(cfg, allow_fetch=False)
+    tz = tzinfo_for(cfg, schedule)
+    now = datetime.now(tz)
+    desired = "on" if should_be_on(schedule, now) else "off"
+    state = load_state()
+
+    log(f"now:            {now:%Y-%m-%d %H:%M %Z}")
+    log(f"schedule source:{source}")
+    log(f"today's windows:{windows_for(schedule, now.date()) or 'none (off all day)'}")
+    log(f"desired:        {desired}")
+    log(f"last applied:   {state.get('desired', 'never')}")
+    log(f"CEC backend:    {resolve_backend(cfg)}")
+    log(f"TV reports:     {cec_power_state(cfg) or 'no answer'}")
+    return 0
+
+
+def cmd_manual(cfg, args):
+    apply_state(cfg, args.command, args.dry_run)
+    return 0
+
+
+def cmd_fetch(cfg, args):
+    schedule = fetch_schedule(cfg)
+    if schedule is None:
+        return 1
+    log(json.dumps(schedule, indent=2))
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Schedule-driven TV power control over HDMI-CEC")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        default="run",
+        choices=["run", "status", "on", "off", "fetch"],
+        help="run (default): apply the schedule once; status: show what it would do",
+    )
+    parser.add_argument("--dry-run", action="store_true", help="decide but don't touch the TV")
+    args = parser.parse_args()
+
+    cfg = load_config()
+    handlers = {"run": cmd_run, "status": cmd_status, "on": cmd_manual, "off": cmd_manual, "fetch": cmd_fetch}
+    return handlers[args.command](cfg, args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

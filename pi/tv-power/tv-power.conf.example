@@ -1,0 +1,35 @@
+# /etc/infoborden/tv-power.conf
+# KEY=VALUE. Any key can also be overridden by an environment variable.
+
+# Which screen this Pi is (1, 2 or 3). Substituted into SCHEDULE_URL.
+SCREEN_ID=1
+
+# Where to pull the schedule from. Leave empty to use only the local
+# /etc/infoborden/tv-power-schedule.json file.
+SCHEDULE_URL=https://infoborden.example.org/api/screens/{screen}/power-schedule
+SCHEDULE_TOKEN=
+# How long a cached schedule stays fresh, in seconds.
+SCHEDULE_TTL=600
+
+# Leave empty to use the Pi's system timezone.
+TIMEZONE=Europe/Brussels
+
+# auto | cec-client | cec-ctl
+CEC_BACKEND=auto
+CEC_DEVICE=/dev/cec0
+# Logical CEC address of the TV. 0 is the TV in every normal setup.
+CEC_TARGET=0
+CEC_TIMEOUT=20
+# Also claim "active source" when waking, so the TV switches to this HDMI input.
+CEC_SET_ACTIVE_SOURCE=1
+
+# If someone turns the TV off with the remote during a scheduled ON window,
+# re-assert the desired state after this many seconds. 0 disables.
+REASSERT_SECONDS=900
+
+# Optional belt-and-braces for TVs with unreliable CEC. Run alongside CEC.
+#   Legacy/fkms graphics:  vcgencmd display_power 1  /  vcgencmd display_power 0
+#   Wayland (labwc/cage):  wlr-randr --output HDMI-A-1 --on  /  --off
+#   X11:                   xset -display :0 dpms force on  /  xset -display :0 dpms force off
+FALLBACK_ON_CMD=
+FALLBACK_OFF_CMD=

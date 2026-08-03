@@ -1,0 +1,13 @@
+[Unit]
+Description=Run the Infoborden TV power schedule every minute
+
+[Timer]
+# Once shortly after boot, then every minute. The agent is a no-op unless the
+# desired state actually changed, so a one-minute tick is cheap.
+OnBootSec=45s
+OnUnitActiveSec=1min
+AccuracySec=10s
+Unit=infoborden-tv-power.service
+
+[Install]
+WantedBy=timers.target
