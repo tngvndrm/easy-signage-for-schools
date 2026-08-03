@@ -122,30 +122,113 @@ export function directImageUrl(raw: string): string {
 // One auth client for the process; creating one per request re-does discovery.
 let auth: GoogleAuth | null = null;
 
-export async function fetchRange(range: string): Promise<string[][]> {
+async function authHeader(): Promise<{ Authorization: string }> {
   auth ??= new GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
   const client = await auth.getClient();
   const token = await client.getAccessToken();
+  return { Authorization: `Bearer ${token.token}` };
+}
 
-  const url =
-    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(SHEET_ID)}` +
-    `/values/${encodeURIComponent(range)}?valueRenderOption=FORMATTED_VALUE`;
+const API = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(SHEET_ID)}`;
 
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${token.token}` },
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    // A tab that hasn't been created yet is a normal state, not a fault: the
-    // key feature simply stays dormant until someone adds the tab.
-    if (res.status === 400 && /Unable to parse range/i.test(body)) {
-      throw new MissingTabError(`No such tab or range: ${range}`);
-    }
-    throw new Error(`Sheets API ${res.status}: ${body}`);
+/** Turn a non-OK Sheets response into the right error, reusing the range name. */
+async function sheetsError(res: Response, range: string): Promise<Error> {
+  const body = await res.text();
+  // A tab that hasn't been created yet is a normal state, not a fault: the
+  // feature simply stays dormant until someone adds the tab.
+  if (res.status === 400 && /Unable to parse range/i.test(body)) {
+    return new MissingTabError(`No such tab or range: ${range}`);
   }
+  return new Error(`Sheets API ${res.status}: ${body}`);
+}
+
+/** Read one range on its own — the batch fallback, and the single-range path. */
+async function fetchSingle(range: string): Promise<string[][]> {
+  const url = `${API}/values/${encodeURIComponent(range)}?valueRenderOption=FORMATTED_VALUE`;
+  const res = await fetch(url, { headers: await authHeader(), cache: "no-store" });
+  if (!res.ok) throw await sheetsError(res, range);
   const json = (await res.json()) as { values?: string[][] };
   return json.values ?? [];
+}
+
+/**
+ * Read several ranges in a single request. The Sheets read quota is per user
+ * per minute (60), and every board load reads a tab per feature; batching keeps
+ * a screenful to one request instead of one-per-tab. `valueRanges` come back in
+ * request order, so results map by index.
+ */
+async function fetchBatch(ranges: string[]): Promise<string[][][]> {
+  const query = ranges
+    .map((r) => `ranges=${encodeURIComponent(r)}`)
+    .join("&");
+  const url = `${API}/values:batchGet?${query}&valueRenderOption=FORMATTED_VALUE`;
+  const res = await fetch(url, { headers: await authHeader(), cache: "no-store" });
+  // A single missing tab 400s the whole batch; the caller falls back per-range.
+  if (!res.ok) throw await sheetsError(res, ranges.join(", "));
+  const json = (await res.json()) as {
+    valueRanges?: { values?: string[][] }[];
+  };
+  const valueRanges = json.valueRanges ?? [];
+  return ranges.map((_, i) => valueRanges[i]?.values ?? []);
+}
+
+// Ranges asked for within the same tick are coalesced into one batchGet. A
+// board load fires every reader synchronously (Promise.allSettled over the
+// range list), so they all land in one queue before the microtask flush.
+type Pending = {
+  range: string;
+  resolve: (rows: string[][]) => void;
+  reject: (error: unknown) => void;
+};
+let queue: Pending[] = [];
+let flushing = false;
+
+async function flushQueue(): Promise<void> {
+  const batch = queue;
+  queue = [];
+  flushing = false;
+
+  // One range in flight — a batch of one is just a single read.
+  if (batch.length === 1) {
+    try {
+      batch[0].resolve(await fetchSingle(batch[0].range));
+    } catch (error) {
+      batch[0].reject(error);
+    }
+    return;
+  }
+
+  try {
+    const results = await fetchBatch(batch.map((b) => b.range));
+    batch.forEach((b, i) => b.resolve(results[i]));
+  } catch {
+    // The batch failed as a whole (usually one absent tab). Fall back to
+    // isolated reads so a single missing tab can't blank every other zone —
+    // each range then succeeds or throws its own MissingTabError.
+    await Promise.all(
+      batch.map(async (b) => {
+        try {
+          b.resolve(await fetchSingle(b.range));
+        } catch (error) {
+          b.reject(error);
+        }
+      }),
+    );
+  }
+}
+
+/**
+ * Read a range. Calls made in the same tick share one `values:batchGet`, so a
+ * whole board load costs a single Sheets request rather than one per tab.
+ */
+export function fetchRange(range: string): Promise<string[][]> {
+  return new Promise((resolve, reject) => {
+    queue.push({ range, resolve, reject });
+    if (!flushing) {
+      flushing = true;
+      queueMicrotask(flushQueue);
+    }
+  });
 }
