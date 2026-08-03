@@ -35,6 +35,8 @@ const EVENT_POSTER_FOR_MS = 25_000;
 const SUBS_WIDE_THRESHOLD = 8;
 /** Rows that fit at full size once the board owns the full height. */
 const WIDE_COMFORTABLE_ROWS = 9;
+/** Rows that fit at full size on a full-screen special occasion (no chrome). */
+const FULLSCREEN_COMFORTABLE_ROWS = 11;
 /** How long each Big Slide holds the screen when several are active. */
 const BIG_SLIDE_FOR_MS = 20_000;
 /** After this long without a successful poll, tell the room the data is old. */
@@ -65,7 +67,6 @@ export function BoardShell({
   screenId,
   forceKeyPanel = false,
   forceEvent = false,
-  forceOccasion = false,
 }: {
   initial: BoardData;
   screenId: string;
@@ -73,8 +74,6 @@ export function BoardShell({
   forceKeyPanel?: boolean;
   /** Preview: hold the event poster on screen instead of cycling it. */
   forceEvent?: boolean;
-  /** Preview: hold the special occasion board on screen instead of cycling it. */
-  forceOccasion?: boolean;
 }) {
   const [data, setData] = useState<BoardData>(initial);
   const [stale, setStale] = useState(false);
@@ -160,31 +159,26 @@ export function BoardShell({
       ? periodicSlides[periodicIndex % periodicSlides.length]
       : null;
 
-  // Resolve which special occasion (if any) occupies the main area.
+  // Special occasions follow the same three-way logic as Big Slide messages.
+  // "Permanent" holds the whole screen for its window; "Yes" bursts full-screen
+  // on its turn in the rotation; "No" replaces the substitution board inline,
+  // keeping the header and message strip. ?occasion=1 previews the inline form,
+  // which is where the demo occasion lands.
+  const permanentOccasion = data.permanentSpecialOccasions[0] ?? null;
   const periodicOccasion =
     data.periodicSpecialOccasions.length > 0 && showing === "specialoccasion"
       ? data.periodicSpecialOccasions[
           periodicOccasionIndex % data.periodicSpecialOccasions.length
         ]
       : null;
-  const activeOccasion =
-    data.permanentSpecialOccasions[0] ??
-    periodicOccasion ??
-    data.specialOccasions[0] ??
-    null;
-  // forceOccasion makes any available occasion visible for preview.
-  const displayOccasion =
-    activeOccasion ??
-    (forceOccasion
-      ? (data.periodicSpecialOccasions[0] ?? null)
-      : null);
+  const inlineOccasion = data.specialOccasions[0] ?? null;
 
   // Past this many substitutions the top-65%-tall board gets cramped, so the
   // layout reflows to give it the full height (see the two return branches).
-  // Never while the key panel or a special occasion is in the main area.
+  // Never while the key panel or an inline occasion is in the main area.
   const wideSubs =
     !showKeys &&
-    !displayOccasion &&
+    !inlineOccasion &&
     !data.substitutionsUnavailable &&
     data.substitutions.length > SUBS_WIDE_THRESHOLD;
 
@@ -246,6 +240,23 @@ export function BoardShell({
     );
   }
 
+  // A "Permanent" special occasion owns the whole screen for its window — the
+  // day's schedule is the point, so the header and message strip step aside.
+  if (permanentOccasion) {
+    return (
+      <main
+        className="kiosk flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
+        {...root}
+      >
+        <SpecialOccasionBoard
+          occasion={permanentOccasion}
+          comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
+          fullscreen
+        />
+      </main>
+    );
+  }
+
   // A "Yes" Big Slide bursts full-screen on its turn in the rotation.
   if (periodicSlide) {
     return (
@@ -254,6 +265,22 @@ export function BoardShell({
         {...root}
       >
         <BigSlide message={periodicSlide} />
+      </main>
+    );
+  }
+
+  // A "Yes" special occasion bursts full-screen on its turn in the rotation.
+  if (periodicOccasion) {
+    return (
+      <main
+        className="kiosk flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
+        {...root}
+      >
+        <SpecialOccasionBoard
+          occasion={periodicOccasion}
+          comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
+          fullscreen
+        />
       </main>
     );
   }
@@ -334,8 +361,8 @@ export function BoardShell({
         </div>
       ) : (
         <>
-          {displayOccasion ? (
-            <SpecialOccasionBoard occasion={displayOccasion} />
+          {inlineOccasion ? (
+            <SpecialOccasionBoard occasion={inlineOccasion} />
           ) : showKeys ? (
             <KeyPanel duties={data.keys} />
           ) : (

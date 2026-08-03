@@ -57,7 +57,6 @@ export default async function ScreenPage({
         // ?keypanel=1 pins the key panel on, rather than waiting out its cycle.
         forceKeyPanel={query.keypanel === "1"}
         forceEvent={query.event === "1"}
-        forceOccasion={query.occasion === "1"}
       />
     </>
   );
