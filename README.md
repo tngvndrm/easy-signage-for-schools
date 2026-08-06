@@ -283,10 +283,10 @@ where a sister school forks and deploys anyway.
 A `Settings` tab lets staff retune each screen live — no code, no redeploy. One
 row per screen (`Display` = 1/2/3):
 
-| Display | Name | Color Scheme | Dark theme start | Light theme start |
-| --- | --- | --- | --- | --- |
-| 1 | Inkomhal | Coral | 18:00 | 8:30 |
-| 2 | Blok B | Gold | 18:00 | 8:30 |
+| Display | Name | Color Scheme | Dark theme start | Light theme start | Message Cycle Time | Full Screen Interval | Full Screen Time |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Inkomhal | Coral | 18:00 | 8:30 | 12 | 180 | 20 |
+| 2 | Blok B | Gold | 18:00 | 8:30 | 12 | 180 | 20 |
 
 - **Name** shows in the status bar instead of "Scherm 1".
 - **Color Scheme** is the accent — `Coral`, `Gold` or `Blue`.
@@ -294,6 +294,15 @@ row per screen (`Display` = 1/2/3):
   times (dark from 18:00 until 8:30, here). Leave both blank to stay on the
   environment default. Evaluated against the host clock and refreshed on the
   30-second poll, so a screen switches within half a minute of the time.
+- **Message Cycle Time** (seconds) is how long each notice holds the message
+  zone. Default 12. A message with its own duration still wins.
+- **Full Screen Interval** (seconds) is how often the board hands the screen to
+  a full-screen item — the key list, an event poster, a Big Slide, a special
+  occasion. Default 180 (3 minutes).
+- **Full Screen Time** (seconds) is how long each of those bursts stays up
+  before the dashboard returns. Default 20.
+- All three are per screen, and blank or unparseable means "use the default", so
+  a typo slows nothing down.
 - `Turn Off` / `Turn On` are read by the separate TV-power (CEC) feature, not
   the board.
 
@@ -309,7 +318,8 @@ the tab land on the next poll — no reload needed.
   a scrollbar — a kiosk has no one to scroll it. Type is sized for reading from
   down the corridor; past about seven rows it scales down together so a busy day
   still fits instead of colliding.
-- **Message loop** cross-fades every 12s (per-item `durationSec` overrides it)
+- **Message loop** cross-fades every 12s by default (`Message Cycle Time` in the
+  Settings tab retunes it, and a per-item `durationSec` overrides that)
   and shows its position as "2 van 3", so a passer-by knows whether they've seen
   everything or should wait for one more.
 - **Readable at a desk too.** The same URL works on a laptop: click a dot to
@@ -354,7 +364,7 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Evenementen` | `Datum · Tijd · Toon vanaf · Klas · Titel · Synopsis · Poster` |
 | `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
-| `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start` |
+| `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
 | `Style` | `Logo · School` + a `Color Name / Color Code` table |
 

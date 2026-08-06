@@ -9,10 +9,16 @@ import type {
 } from "./types";
 
 /** Per-screen settings for demo mode: a name, an accent, and a dark-at-18h rule. */
+const demoTiming = {
+  messageCycleSec: null,
+  fullScreenIntervalSec: null,
+  fullScreenSec: null,
+};
+
 export const demoSettings: Record<string, ScreenSettings> = {
-  "1": { name: "Inkomhal", accent: "coral", darkStartMin: 18 * 60, lightStartMin: 8 * 60 + 30 },
-  "2": { name: "Blok B", accent: "gold", darkStartMin: null, lightStartMin: null },
-  "3": { name: "Leraarskamer", accent: "blue", darkStartMin: null, lightStartMin: null },
+  "1": { name: "Inkomhal", accent: "coral", darkStartMin: 18 * 60, lightStartMin: 8 * 60 + 30, ...demoTiming },
+  "2": { name: "Blok B", accent: "gold", darkStartMin: null, lightStartMin: null, ...demoTiming },
+  "3": { name: "Leraarskamer", accent: "blue", darkStartMin: null, lightStartMin: null, ...demoTiming },
 };
 
 /**

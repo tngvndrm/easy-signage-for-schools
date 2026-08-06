@@ -7,6 +7,15 @@ import type { BoardMessage } from "@/lib/types";
  *   - image, no tick        → poster layout, artwork beside the text.
  *   - no image              → centred text on the brand colour.
  */
+/**
+ * Which BurstProgress tone reads on this slide — the poster treatment sits on
+ * the page background, the other two on artwork or the brand colour. Kept
+ * beside the three returns below so it's updated along with them.
+ */
+export function bigSlideTone(message: BoardMessage): "accent" | "light" {
+  return message.imageUrl && !message.cover ? "accent" : "light";
+}
+
 export function BigSlide({ message }: { message: BoardMessage }) {
   const shadow = "[text-shadow:0_0.1rem_0.4rem_rgba(0,0,0,0.6)]";
 

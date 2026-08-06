@@ -98,6 +98,15 @@ export type EventItem = {
   posterUrl: string;
 };
 
+export type BoardTiming = {
+  /** Seconds each message holds the rotation, unless the item overrides it. */
+  messageCycleSec: number;
+  /** Seconds between full-screen bursts (keys, event, Big Slide, occasion). */
+  fullScreenIntervalSec: number;
+  /** Seconds one full-screen burst stays up before the dashboard returns. */
+  fullScreenSec: number;
+};
+
 export type BoardData = {
   /** ISO date (Europe/Brussels) the substitution rows belong to. */
   date: string;
@@ -107,6 +116,8 @@ export type BoardData = {
   appearance: { theme: "light" | "dark"; accent: "coral" | "gold" | "blue" };
   /** Friendly screen name from the Settings tab, or null to show "Scherm N". */
   screenName: string | null;
+  /** How fast this screen paces itself, in seconds (Settings tab, with defaults). */
+  timing: BoardTiming;
   /** Global branding (logo, colours, font) from the Style tab. */
   style: BrandStyle;
   substitutions: Substitution[];

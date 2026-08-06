@@ -29,6 +29,7 @@ import type {
   Birthday,
   BoardData,
   BoardMessage,
+  BoardTiming,
   EventItem,
   KeyDuty,
   SpecialOccasion,
@@ -41,6 +42,13 @@ const ENV_THEME = process.env.THEME === "dark" ? "dark" : "light";
 const ENV_ACCENT = ["coral", "gold", "blue"].includes(process.env.ACCENT ?? "")
   ? (process.env.ACCENT as Accent)
   : "coral";
+
+/** Pace used when the Settings tab leaves the timing columns blank. */
+const DEFAULT_TIMING: BoardTiming = {
+  messageCycleSec: 12,
+  fullScreenIntervalSec: 180,
+  fullScreenSec: 20,
+};
 
 /** yyyy-mm-dd in the school's timezone, not the server's. */
 export function todayInSchoolTz(now = new Date()): string {
@@ -237,6 +245,12 @@ export async function getBoardData(
     dateLabel: dateLabel(options.date ? new Date(`${options.date}T12:00:00`) : now),
     appearance: { theme, accent },
     screenName: set.name,
+    timing: {
+      messageCycleSec: set.messageCycleSec ?? DEFAULT_TIMING.messageCycleSec,
+      fullScreenIntervalSec:
+        set.fullScreenIntervalSec ?? DEFAULT_TIMING.fullScreenIntervalSec,
+      fullScreenSec: set.fullScreenSec ?? DEFAULT_TIMING.fullScreenSec,
+    },
     style,
     substitutions,
     schedule,
