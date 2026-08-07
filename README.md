@@ -37,6 +37,12 @@ Slide takeovers all come from their sheet tabs. With `SHEET_ID` unset the board
 runs on `lib/demo-data.ts` and shows a **Demo-data** badge; set it and the badge
 disappears.
 
+Each screen's **pace** is staff-set too — how long a notice holds the message
+zone, how often a full-screen item interrupts, and how long it stays — and a
+hairline along the bottom edge shows where the screen is in that cycle. See
+[Per-screen settings](#per-screen-settings) and
+[One interruption at a time](#one-interruption-at-a-time).
+
 **Previews** (also linked from `/`), appended to a screen URL:
 
 | Query | Shows |
@@ -227,10 +233,29 @@ Preview with `?event=1`, which falls back to a sample when nothing is scheduled.
 
 The key panel, the event poster and periodic (`Yes`) Big Slides share a single
 rotation rather than running their own timers — independent timers would
-eventually fire together and fight over the screen. Every 3 minutes the board
-shows the next one due, then returns to the dashboard. A `Permanent` Big Slide
-outranks all of them: it holds the whole screen for its window, since it was set
-for exactly those days on purpose.
+eventually fire together and fight over the screen. Every `Full Screen Interval`
+(3 minutes by default) the board shows the next one due for `Full Screen Time`,
+then returns to the dashboard. A `Permanent` Big Slide outranks all of them: it
+holds the whole screen for its window, since it was set for exactly those days
+on purpose.
+
+A hairline along the bottom edge of the screen says where in that cycle you are,
+so nobody has to guess whether it's worth waiting:
+
+- **During a burst** it drains over `Full Screen Time`. A takeover hides the
+  substitution board, which is what most people walked over to read, and
+  otherwise there's no telling a five-second interruption from a stuck screen.
+  `Permanent` slides and occasions get no bar — they hold all day, and a drain
+  would promise a return that never comes.
+- **On the dashboard** it carries a dot per interruption and creeps across one
+  full lap, so a student can see how many different screens there are and how
+  far along they are. A lap is one turn per kind times the largest kind, not one
+  per item: two Big Slides and two special occasions come round as slide,
+  occasion, slide, occasion — four turns, so four dots' worth of waiting. The
+  count re-derives itself as slides come and go through the week.
+
+Both are CSS animations rather than per-frame timers, since three Pis run this
+all day.
 
 ### Birthdays
 
