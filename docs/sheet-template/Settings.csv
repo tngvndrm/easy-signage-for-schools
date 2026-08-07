@@ -1,4 +1,4 @@
-Display,Name,Color Scheme,Dark theme start,Light theme start,Turn Off,Turn On
-1,Inkomhal,Coral,18:00,8:30,,
-2,Blok B,Gold,18:00,8:30,,
-3,Leraarskamer,Blue,18:00,8:30,,
+Display,Name,Color Scheme,Dark theme start,Light theme start,Turn Off,Turn On,Message Cycle Time,Full Screen Interval,Full Screen Time
+1,Inkomhal,Coral,18:00,8:30,,,12,180,20
+2,Blok B,Gold,18:00,8:30,,,12,180,20
+3,Leraarskamer,Blue,18:00,8:30,,,12,180,20

@@ -1,13 +1,13 @@
 import { fetchRange, findHeader, MissingTabError, normalizeText } from "./sheets";
 import { ACCENTS, type Accent } from "./theme";
 
-const SETTINGS_RANGE = process.env.SETTINGS_SHEET_RANGE ?? "Settings!A1:H30";
+const SETTINGS_RANGE = process.env.SETTINGS_SHEET_RANGE ?? "Settings!A1:L30";
 
 /**
  * Per-screen settings staff can change live from the sheet, no redeploy: a
- * friendly name, an accent colour, and the times the board flips between the
- * light and dark theme. (Turn Off / Turn On are read by the separate TV-power
- * feature, not here.)
+ * friendly name, an accent colour, the times the board flips between the light
+ * and dark theme, and how fast the board paces itself. (Turn Off / Turn On are
+ * read by the separate TV-power feature, not here.)
  */
 export type ScreenSettings = {
   name: string | null;
@@ -16,6 +16,12 @@ export type ScreenSettings = {
   darkStartMin: number | null;
   /** Minutes-of-day the light theme starts; null when unscheduled. */
   lightStartMin: number | null;
+  /** Seconds each message holds the rotation; null falls back to the default. */
+  messageCycleSec: number | null;
+  /** Seconds between full-screen bursts; null falls back to the default. */
+  fullScreenIntervalSec: number | null;
+  /** Seconds a full-screen burst holds; null falls back to the default. */
+  fullScreenSec: number | null;
 };
 
 export const EMPTY_SETTINGS: ScreenSettings = {
@@ -23,6 +29,9 @@ export const EMPTY_SETTINGS: ScreenSettings = {
   accent: null,
   darkStartMin: null,
   lightStartMin: null,
+  messageCycleSec: null,
+  fullScreenIntervalSec: null,
+  fullScreenSec: null,
 };
 
 const COLUMNS = {
@@ -31,6 +40,9 @@ const COLUMNS = {
   accent: ["colorscheme", "kleur", "accent", "kleurenschema", "color"],
   darkStart: ["darkthemestart", "donkerthemastart", "darkstart", "donker"],
   lightStart: ["lightthemestart", "lichtthemastart", "lightstart", "licht"],
+  messageCycle: ["messagecycletime", "messagecycle", "berichttijd", "mededelingstijd"],
+  fullScreenInterval: ["fullscreeninterval", "volledigscherminterval", "scherminterval"],
+  fullScreen: ["fullscreentime", "fullscreen", "volledigschermtijd", "schermtijd"],
 };
 
 /** "18:00", "8:30" -> minutes since midnight; null if unparseable. */
@@ -41,6 +53,16 @@ function parseHm(raw: string): number | null {
   const min = Number(m[2]);
   if (h > 23 || min > 59) return null;
   return h * 60 + min;
+}
+
+/**
+ * A duration in seconds. Staff may well type "20s" or "1,5"; anything that
+ * isn't a positive number is treated as unset so a typo falls back to the
+ * default rather than freezing or flickering the board.
+ */
+function parseSeconds(raw: string): number | null {
+  const value = Number(raw.trim().replace(",", ".").replace(/s(ec\w*)?$/i, ""));
+  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
 function parseAccent(raw: string): Accent | null {
@@ -91,6 +113,9 @@ export async function readSettings(): Promise<Record<string, ScreenSettings>> {
       accent: parseAccent(cell(columns.accent)),
       darkStartMin: parseHm(cell(columns.darkStart)),
       lightStartMin: parseHm(cell(columns.lightStart)),
+      messageCycleSec: parseSeconds(cell(columns.messageCycle)),
+      fullScreenIntervalSec: parseSeconds(cell(columns.fullScreenInterval)),
+      fullScreenSec: parseSeconds(cell(columns.fullScreen)),
     };
   }
   return out;

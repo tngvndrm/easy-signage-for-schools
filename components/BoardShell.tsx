@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BigSlide } from "./BigSlide";
+import { BigSlide, bigSlideTone } from "./BigSlide";
 import { BirthdayZone } from "./BirthdayZone";
+import { BurstProgress } from "./BurstProgress";
 import { LogoMark } from "./LogoMark";
 import { Clock } from "./Clock";
+import { CycleTrack } from "./CycleTrack";
 import { EventPoster } from "./EventPoster";
 import { KeyPanel } from "./KeyPanel";
 import { KEY_PANEL_THRESHOLD } from "./keys-shared";
@@ -15,17 +17,6 @@ import { useIdlePointer } from "./useIdlePointer";
 import type { BoardData } from "@/lib/types";
 
 const POLL_MS = 30_000;
-/**
- * While a lot of keys are still outstanding, the key list periodically takes
- * the substitution board's place — header, messages and birthday zones stay
- * put, so the screen never stops looking like itself. Short and periodic
- * rather than standing: the substitution board is what people come here for,
- * and a student passing at any point still catches the reminder within a few
- * minutes. Once only a handful are left it drops to the messages zone instead.
- */
-const INTERRUPT_EVERY_MS = 3 * 60_000;
-const KEY_PANEL_FOR_MS = 20_000;
-const EVENT_POSTER_FOR_MS = 25_000;
 
 /**
  * Above this many substitutions the dashboard reflows: the board takes a
@@ -37,8 +28,6 @@ const SUBS_WIDE_THRESHOLD = 8;
 const WIDE_COMFORTABLE_ROWS = 9;
 /** Rows that fit at full size on a full-screen special occasion (no chrome). */
 const FULLSCREEN_COMFORTABLE_ROWS = 11;
-/** How long each Big Slide holds the screen when several are active. */
-const BIG_SLIDE_FOR_MS = 20_000;
 /** After this long without a successful poll, tell the room the data is old. */
 const STALE_MS = 5 * 60_000;
 const CACHE_KEY = "infoborden:board";
@@ -80,12 +69,17 @@ export function BoardShell({
   const lastOkRef = useRef<number>(Date.now());
   const idle = useIdlePointer();
   const [showing, setShowing] = useState<Interrupt | null>(null);
+  const [cycleAnchor, setCycleAnchor] = useState<number | null>(null);
   const [permIndex, setPermIndex] = useState(0);
   const [periodicIndex, setPeriodicIndex] = useState(0);
   const [periodicOccasionIndex, setPeriodicOccasionIndex] = useState(0);
 
   const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
   const event = data.events[0] ?? null;
+
+  // Pace comes from the Settings tab, so staff can retune the board live.
+  const fullScreenMs = data.timing.fullScreenSec * 1000;
+  const interruptEveryMs = data.timing.fullScreenIntervalSec * 1000;
 
   // Theme + accent are resolved server-side per screen (Settings tab); applied
   // on the root of every layout so the whole screen — including a takeover —
@@ -105,14 +99,20 @@ export function BoardShell({
 
   useEffect(() => {
     if (permanentSlides.length < 2) return;
-    const timer = setInterval(() => setPermIndex((i) => i + 1), BIG_SLIDE_FOR_MS);
+    const timer = setInterval(() => setPermIndex((i) => i + 1), fullScreenMs);
     return () => clearInterval(timer);
-  }, [permanentSlides.length]);
+  }, [permanentSlides.length, fullScreenMs]);
 
   /*
    * One rotation drives every interruption. Two independent timers would
    * eventually fire together and fight over the screen; taking turns also
    * means adding a third kind later costs nothing.
+   *
+   * While a lot of keys are still outstanding, the key list takes the
+   * substitution board's place here too — short and periodic rather than
+   * standing, since the substitution board is what people come for, and a
+   * student passing at any point still catches the reminder within a few
+   * minutes. Once only a handful are left it drops to the messages zone.
    */
   const queue: Interrupt[] = [];
   if (manyKeys) queue.push("keys");
@@ -121,12 +121,31 @@ export function BoardShell({
   if (data.periodicSpecialOccasions.length) queue.push("specialoccasion");
   const queueKey = queue.join(",");
 
+  /*
+   * Turns in one full lap — what CycleTrack counts out along the bottom edge.
+   * Each turn shows one kind's *next* item, so seeing every distinct item takes
+   * a turn per kind times the largest kind: two Big Slides and two occasions
+   * come round as slide, occasion, slide, occasion — four turns, not two.
+   */
+  const kindCounts: Record<Interrupt, number> = {
+    keys: 1,
+    event: 1,
+    bigslide: periodicSlides.length,
+    specialoccasion: data.periodicSpecialOccasions.length,
+  };
+  const cycleTurns = queue.length
+    ? queue.length * Math.max(...queue.map((kind) => kindCounts[kind]))
+    : 0;
+
   useEffect(() => {
     const due = queueKey ? (queueKey.split(",") as Interrupt[]) : [];
     if (due.length === 0) {
       setShowing(null);
+      setCycleAnchor(null);
       return;
     }
+    // The lap the bottom hairline draws starts here, with this interval.
+    setCycleAnchor(Date.now());
     let turn = 0;
     let hide: ReturnType<typeof setTimeout>;
     const cycle = setInterval(() => {
@@ -135,20 +154,13 @@ export function BoardShell({
       // Advance through the periodic slides so each burst shows the next one.
       if (next === "bigslide") setPeriodicIndex((i) => i + 1);
       if (next === "specialoccasion") setPeriodicOccasionIndex((i) => i + 1);
-      hide = setTimeout(
-        () => setShowing(null),
-        next === "keys"
-          ? KEY_PANEL_FOR_MS
-          : next === "event"
-            ? EVENT_POSTER_FOR_MS
-            : BIG_SLIDE_FOR_MS,
-      );
-    }, INTERRUPT_EVERY_MS);
+      hide = setTimeout(() => setShowing(null), fullScreenMs);
+    }, interruptEveryMs);
     return () => {
       clearInterval(cycle);
       clearTimeout(hide);
     };
-  }, [queueKey]);
+  }, [queueKey, fullScreenMs, interruptEveryMs]);
 
   // Swaps into the substitution board's slot; everything else stays put.
   const showKeys =
@@ -261,10 +273,14 @@ export function BoardShell({
   if (periodicSlide) {
     return (
       <main
-        className="kiosk h-screen w-screen overflow-hidden bg-bg text-text"
+        className="kiosk relative h-screen w-screen overflow-hidden bg-bg text-text"
         {...root}
       >
         <BigSlide message={periodicSlide} />
+        <BurstProgress
+          seconds={data.timing.fullScreenSec}
+          tone={bigSlideTone(periodicSlide)}
+        />
       </main>
     );
   }
@@ -273,7 +289,7 @@ export function BoardShell({
   if (periodicOccasion) {
     return (
       <main
-        className="kiosk flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
+        className="kiosk relative flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
         {...root}
       >
         <SpecialOccasionBoard
@@ -281,6 +297,7 @@ export function BoardShell({
           comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
           fullscreen
         />
+        <BurstProgress seconds={data.timing.fullScreenSec} />
       </main>
     );
   }
@@ -288,17 +305,21 @@ export function BoardShell({
   if (showEvent && event) {
     return (
       <main
-        className="kiosk h-screen w-screen overflow-hidden bg-bg text-text"
+        className="kiosk relative h-screen w-screen overflow-hidden bg-bg text-text"
         {...root}
       >
         <EventPoster event={event} />
+        {/* Not under `forceEvent`: the preview holds the poster indefinitely. */}
+        {showing === "event" && (
+          <BurstProgress seconds={data.timing.fullScreenSec} />
+        )}
       </main>
     );
   }
 
   return (
     <main
-      className="kiosk flex h-screen w-screen flex-col gap-[1rem] overflow-hidden bg-bg p-[1.2rem] text-text"
+      className="kiosk relative flex h-screen w-screen flex-col gap-[1rem] overflow-hidden bg-bg p-[1.2rem] text-text"
       {...root}
     >
       <header className="flex h-[4.6rem] shrink-0 items-center justify-between rounded-lg border-[0.075rem] border-line bg-surface-1 px-[1.6rem]">
@@ -351,6 +372,7 @@ export function BoardShell({
             <MessageLoop
               messages={data.messages}
               keyDuties={manyKeys ? [] : data.keys}
+              durationSec={data.timing.messageCycleSec}
               tall
             />
             <BirthdayZone
@@ -379,10 +401,20 @@ export function BoardShell({
               // Only once the list is short enough to read here; while it's long
               // the main-area panel carries it instead.
               keyDuties={manyKeys ? [] : data.keys}
+              durationSec={data.timing.messageCycleSec}
             />
             <BirthdayZone birthdays={data.birthdays} />
           </div>
         </>
+      )}
+
+      {/* Nothing interrupts this screen — no cycle to draw. */}
+      {cycleTurns > 0 && cycleAnchor !== null && (
+        <CycleTrack
+          turns={cycleTurns}
+          periodSec={cycleTurns * data.timing.fullScreenIntervalSec}
+          anchor={cycleAnchor}
+        />
       )}
     </main>
   );

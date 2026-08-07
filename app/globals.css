@@ -208,8 +208,63 @@ body {
   }
 }
 
+/* Scale rather than width, so a burst's progress bar stays off the layout path. */
+@keyframes drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 .animate-fade-up {
   animation: fade-up 0.45s ease-out both;
+}
+
+/* Duration is set inline, from the screen's Full Screen Time. */
+.animate-drain {
+  animation-name: drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+/*
+ * The two screen-edge hairlines — a burst draining, the cycle creeping — share
+ * one stroke weight, so the dashboard and a takeover read as the same line.
+ * Kept here rather than as a repeated arbitrary value in both components, which
+ * is exactly the kind of pair that drifts.
+ */
+.edge-hairline {
+  height: 0.16rem;
+}
+
+/*
+ * A cycle marker sits *in* the line rather than on top of it: same diameter as
+ * the stroke, with a gap punched either side in the page colour so it reads as
+ * a break — "---- o ----" — instead of a bead threaded onto the line.
+ */
+.edge-hairline-dot {
+  width: 0.16rem;
+  height: 0.16rem;
+  box-shadow: 0 0 0 0.1rem var(--bg);
+}
+
+@keyframes creep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* Duration is one lap of the interruption cycle; a negative delay set inline
+   phases it onto the rotation's clock. */
+.animate-creep {
+  animation-name: creep;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
 .animate-pulse-soft {

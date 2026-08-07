@@ -47,11 +47,14 @@ type Slide =
 export function MessageLoop({
   messages,
   keyDuties = [],
+  durationSec = DEFAULT_DURATION_SEC,
   tall = false,
 }: {
   messages: BoardMessage[];
   /** Only passed once the list is short enough for this zone; see BoardShell. */
   keyDuties?: KeyDuty[];
+  /** Seconds per card, from the Settings tab; a message may override its own. */
+  durationSec?: number;
   /** Narrow, full-height card (busy-day right column) — lay images out on top. */
   tall?: boolean;
 }) {
@@ -85,10 +88,10 @@ export function MessageLoop({
     if (!interactive) return;
     const seconds =
       (current?.kind === "message" ? current.message.durationSec : undefined) ??
-      DEFAULT_DURATION_SEC;
+      durationSec;
     const timer = setTimeout(() => setIndex((i) => i + 1), seconds * 1000);
     return () => clearTimeout(timer);
-  }, [current, interactive, safeIndex, restart]);
+  }, [current, durationSec, interactive, safeIndex, restart]);
 
   // Arrow keys for anyone reading the board at their desk. The kiosk has no
   // keyboard, so this costs it nothing.

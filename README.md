@@ -37,6 +37,12 @@ Slide takeovers all come from their sheet tabs. With `SHEET_ID` unset the board
 runs on `lib/demo-data.ts` and shows a **Demo-data** badge; set it and the badge
 disappears.
 
+Each screen's **pace** is staff-set too — how long a notice holds the message
+zone, how often a full-screen item interrupts, and how long it stays — and a
+hairline along the bottom edge shows where the screen is in that cycle. See
+[Per-screen settings](#per-screen-settings) and
+[One interruption at a time](#one-interruption-at-a-time).
+
 **Previews** (also linked from `/`), appended to a screen URL:
 
 | Query | Shows |
@@ -227,10 +233,29 @@ Preview with `?event=1`, which falls back to a sample when nothing is scheduled.
 
 The key panel, the event poster and periodic (`Yes`) Big Slides share a single
 rotation rather than running their own timers — independent timers would
-eventually fire together and fight over the screen. Every 3 minutes the board
-shows the next one due, then returns to the dashboard. A `Permanent` Big Slide
-outranks all of them: it holds the whole screen for its window, since it was set
-for exactly those days on purpose.
+eventually fire together and fight over the screen. Every `Full Screen Interval`
+(3 minutes by default) the board shows the next one due for `Full Screen Time`,
+then returns to the dashboard. A `Permanent` Big Slide outranks all of them: it
+holds the whole screen for its window, since it was set for exactly those days
+on purpose.
+
+A hairline along the bottom edge of the screen says where in that cycle you are,
+so nobody has to guess whether it's worth waiting:
+
+- **During a burst** it drains over `Full Screen Time`. A takeover hides the
+  substitution board, which is what most people walked over to read, and
+  otherwise there's no telling a five-second interruption from a stuck screen.
+  `Permanent` slides and occasions get no bar — they hold all day, and a drain
+  would promise a return that never comes.
+- **On the dashboard** it carries a dot per interruption and creeps across one
+  full lap, so a student can see how many different screens there are and how
+  far along they are. A lap is one turn per kind times the largest kind, not one
+  per item: two Big Slides and two special occasions come round as slide,
+  occasion, slide, occasion — four turns, so four dots' worth of waiting. The
+  count re-derives itself as slides come and go through the week.
+
+Both are CSS animations rather than per-frame timers, since three Pis run this
+all day.
 
 ### Birthdays
 
@@ -283,10 +308,10 @@ where a sister school forks and deploys anyway.
 A `Settings` tab lets staff retune each screen live — no code, no redeploy. One
 row per screen (`Display` = 1/2/3):
 
-| Display | Name | Color Scheme | Dark theme start | Light theme start |
-| --- | --- | --- | --- | --- |
-| 1 | Inkomhal | Coral | 18:00 | 8:30 |
-| 2 | Blok B | Gold | 18:00 | 8:30 |
+| Display | Name | Color Scheme | Dark theme start | Light theme start | Message Cycle Time | Full Screen Interval | Full Screen Time |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Inkomhal | Coral | 18:00 | 8:30 | 12 | 180 | 20 |
+| 2 | Blok B | Gold | 18:00 | 8:30 | 12 | 180 | 20 |
 
 - **Name** shows in the status bar instead of "Scherm 1".
 - **Color Scheme** is the accent — `Coral`, `Gold` or `Blue`.
@@ -294,6 +319,15 @@ row per screen (`Display` = 1/2/3):
   times (dark from 18:00 until 8:30, here). Leave both blank to stay on the
   environment default. Evaluated against the host clock and refreshed on the
   30-second poll, so a screen switches within half a minute of the time.
+- **Message Cycle Time** (seconds) is how long each notice holds the message
+  zone. Default 12. A message with its own duration still wins.
+- **Full Screen Interval** (seconds) is how often the board hands the screen to
+  a full-screen item — the key list, an event poster, a Big Slide, a special
+  occasion. Default 180 (3 minutes).
+- **Full Screen Time** (seconds) is how long each of those bursts stays up
+  before the dashboard returns. Default 20.
+- All three are per screen, and blank or unparseable means "use the default", so
+  a typo slows nothing down.
 - `Turn Off` / `Turn On` are read by the separate TV-power (CEC) feature, not
   the board.
 
@@ -309,7 +343,8 @@ the tab land on the next poll — no reload needed.
   a scrollbar — a kiosk has no one to scroll it. Type is sized for reading from
   down the corridor; past about seven rows it scales down together so a busy day
   still fits instead of colliding.
-- **Message loop** cross-fades every 12s (per-item `durationSec` overrides it)
+- **Message loop** cross-fades every 12s by default (`Message Cycle Time` in the
+  Settings tab retunes it, and a per-item `durationSec` overrides that)
   and shows its position as "2 van 3", so a passer-by knows whether they've seen
   everything or should wait for one more.
 - **Readable at a desk too.** The same URL works on a laptop: click a dot to
@@ -354,7 +389,7 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Evenementen` | `Datum · Tijd · Toon vanaf · Klas · Titel · Synopsis · Poster` |
 | `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
-| `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start` |
+| `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
 | `Style` | `Logo · School` + a `Color Name / Color Code` table |
 
