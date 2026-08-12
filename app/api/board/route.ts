@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     date: date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined,
     keyLimit: Number.isFinite(keyLimit) ? keyLimit : undefined,
     screenId: screen ?? undefined,
+    buildStampOverride: params.get("build") ?? undefined,
     themeOverride: THEMES.includes(theme as "light" | "dark")
       ? (theme as "light" | "dark")
       : undefined,

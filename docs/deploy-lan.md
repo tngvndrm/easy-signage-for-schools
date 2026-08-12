@@ -137,7 +137,68 @@ sudo systemctl restart infoborden
 ```
 
 All three screens pick the change up on their next poll — within 30 seconds, no
-need to touch the display Pis.
+need to touch the display Pis. Data changes land by themselves; **code** changes
+land because each screen notices the host is running a build it isn't, and
+reloads itself (see below).
+
+### Which build is on the screen?
+
+Every build is stamped with the commit it came from and the time it was built —
+`a3f19c · 07-08 21:40`. A `*` after the commit means the tree was dirty when it
+was built, which on the host means someone edited files in `/opt/infoborden`
+instead of committing.
+
+On a normal school day the stamp is **hidden**: nobody in the corridor needs a
+commit hash, and the screens keep themselves current whether or not it's on
+screen. Turn it on while you're deploying or chasing a problem, in
+`/opt/infoborden/.env.local`:
+
+```
+BUILD_STAMP=on
+```
+
+```bash
+sudo systemctl restart infoborden
+```
+
+It appears in the bottom-right corner of all three panels within 30 seconds,
+small and faint — legible if you walk up to a screen, ignorable from down the
+corridor. Set it back to `off` (or delete the line) and restart, and it's gone
+again just as fast; the screens notice the setting changed and pick it up on
+their next poll, so nothing needs rebooting either way.
+
+For one screen only, without touching the host's config, append `?build=1` to
+that panel's `BOARD_URL` in `/etc/default/infoborden-kiosk` (`?build=0` hides
+it). In development the stamp is on by default.
+
+What the *host* is serving, from any machine on the LAN — and this works with
+the stamp hidden:
+
+```bash
+curl -s http://infobord.local/api/board | grep -o '"build":"[^"]*"'
+```
+
+The stamp is baked into the server and the browser bundle at build time, so the
+screens compare the two on every poll. When they differ — the host has been
+rebuilt, the panel is still running the old bundle — the screen reloads itself
+at the next gap between full-screen items, so nobody watches a message get cut
+in half. It reloads at most once per host build: if a reload doesn't fix the
+mismatch, the board stays up rather than flashing every 30 seconds.
+
+That happens with the stamp hidden too — it's the half of this that earns its
+keep on ordinary days. It covers the failure that used to look like "the deploy
+didn't work": the host was fine, and the panel was still running the bundle it
+booted with weeks earlier, since a kiosk loads the page once and never navigates
+again.
+
+If a screen's stamp is still behind a few minutes after a deploy (with
+`BUILD_STAMP=on`):
+
+- Stamp matches `curl` but the change isn't there → the build didn't include it.
+  Check `git log -1` on the host.
+- Stamp is behind and not moving → that panel isn't polling. It should also be
+  showing "Geen verbinding" within five minutes; check the network first, then
+  `systemctl restart infoborden-kiosk` on that Pi.
 
 ## Never point a screen at `next dev`
 

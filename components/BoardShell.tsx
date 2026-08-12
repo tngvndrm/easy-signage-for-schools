@@ -14,6 +14,7 @@ import { MessageLoop } from "./MessageLoop";
 import { SpecialOccasionBoard } from "./SpecialOccasionBoard";
 import { SubstitutionBoard } from "./SubstitutionBoard";
 import { useIdlePointer } from "./useIdlePointer";
+import { BUILD } from "@/lib/build";
 import type { BoardData } from "@/lib/types";
 
 const POLL_MS = 30_000;
@@ -31,6 +32,8 @@ const FULLSCREEN_COMFORTABLE_ROWS = 11;
 /** After this long without a successful poll, tell the room the data is old. */
 const STALE_MS = 5 * 60_000;
 const CACHE_KEY = "infoborden:board";
+/** Which server state this tab has already reloaded for — see useBuildReload. */
+const RELOADED_KEY = "infoborden:reloaded-for";
 
 type Interrupt = "keys" | "event" | "bigslide" | "specialoccasion";
 
@@ -42,6 +45,43 @@ function readCache(): BoardData | null {
     return null;
   }
 }
+
+/**
+ * Pick up a new deploy without anyone walking to the display Pis.
+ *
+ * A kiosk loads the board once and stays on it for months: the poll refreshes
+ * *data*, so an update on the host reaches the screens' markup and JavaScript
+ * never. This closes that gap — when what the server reports stops matching
+ * what this page was rendered from, the screen reloads itself.
+ *
+ * "What it was rendered from" is the build *and* whether the build stamp was
+ * showing, since that's server-rendered too: without it here, switching the
+ * stamp off would leave it on the wall until something else happened to reload
+ * the screen.
+ *
+ * It waits for a quiet moment (no full-screen burst) so nobody watches a
+ * message vanish mid-sentence, and it reloads at most once per distinct server
+ * state, so a mismatch that a reload can't fix — a proxy serving cached markup,
+ * say — leaves a working board on the wall instead of a screen flashing every
+ * 30 seconds forever.
+ */
+function useBuildReload(serverState: string, ownState: string, quiet: boolean) {
+  useEffect(() => {
+    if (!serverState || serverState === ownState || !quiet) return;
+    try {
+      if (window.sessionStorage.getItem(RELOADED_KEY) === serverState) return;
+      window.sessionStorage.setItem(RELOADED_KEY, serverState);
+    } catch {
+      // No session storage, so no loop guard. Still reload: a screen running
+      // stale code is the certain problem, the loop only a possible one.
+    }
+    window.location.reload();
+  }, [serverState, ownState, quiet]);
+}
+
+/** The two server-rendered things a screen can fall behind on. */
+const stateKey = (build: string, stampVisible: boolean) =>
+  `${build}|${stampVisible ? "stamp" : "nostamp"}`;
 
 function writeCache(data: BoardData) {
   try {
@@ -66,6 +106,12 @@ export function BoardShell({
 }) {
   const [data, setData] = useState<BoardData>(initial);
   const [stale, setStale] = useState(false);
+  // Tracked apart from `data` because the cache below can restore a payload
+  // from an older build, and a build this screen read off its own disk says
+  // nothing about what the host is serving now.
+  const [serverState, setServerState] = useState(
+    stateKey(initial.build, initial.buildStampVisible),
+  );
   const lastOkRef = useRef<number>(Date.now());
   const idle = useIdlePointer();
   const [showing, setShowing] = useState<Interrupt | null>(null);
@@ -204,6 +250,7 @@ export function BoardShell({
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const next = (await res.json()) as BoardData;
       setData(next);
+      setServerState(stateKey(next.build, next.buildStampVisible));
       writeCache(next);
       lastOkRef.current = Date.now();
       setStale(false);
@@ -238,6 +285,15 @@ export function BoardShell({
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [poll]);
+
+  // Between bursts, so a deploy never cuts a full-screen message in half. The
+  // page's own state is the build it was compiled from plus the stamp setting
+  // it was rendered with — not the current payload, which the poll updates.
+  useBuildReload(
+    serverState,
+    stateKey(BUILD, initial.buildStampVisible),
+    showing === null,
+  );
 
   // A "Permanent" Big Slide holds the whole screen for its window — it outranks
   // everything, since it was set for exactly these days on purpose.

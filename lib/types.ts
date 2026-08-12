@@ -141,6 +141,17 @@ export type BoardData = {
   periodicSpecialOccasions: SpecialOccasion[];
   /** Server timestamp (ms) of this payload; used for the staleness indicator. */
   fetchedAt: number;
+  /**
+   * The build the *server* is running. A screen compares it against the build
+   * its own bundle came from, and reloads when the host has moved on.
+   */
+  build: string;
+  /**
+   * Whether the corner build stamp should be showing. Travels with the payload
+   * so flipping it on the host reaches the screens on their next poll, instead
+   * of waiting for whatever reloads them next.
+   */
+  buildStampVisible: boolean;
   /** True when the payload came from mock data, not a real Sheet. */
   demo: boolean;
   /**

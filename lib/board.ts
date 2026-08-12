@@ -9,6 +9,7 @@ import {
   demoSubstitutions,
 } from "./demo-data";
 import { readBirthdays } from "./birthdays";
+import { BUILD, showBuildStamp } from "./build";
 import { readEvents } from "./events";
 import { readKeyDuties } from "./keys";
 import { readMessages } from "./messages";
@@ -106,6 +107,8 @@ export async function getBoardData(
     /** Query overrides that beat the sheet: ?theme=, ?accent=. */
     themeOverride?: "light" | "dark";
     accentOverride?: Accent;
+    /** Raw ?build= value, if the screen URL carried one. */
+    buildStampOverride?: string;
   } = {},
 ): Promise<BoardData> {
   const now = new Date();
@@ -264,6 +267,8 @@ export async function getBoardData(
     periodicSpecialOccasions,
     permanentSpecialOccasions,
     fetchedAt: now.getTime(),
+    build: BUILD,
+    buildStampVisible: showBuildStamp(options.buildStampOverride),
     demo,
     substitutionsUnavailable,
   };
