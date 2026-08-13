@@ -250,6 +250,7 @@ export function BoardShell({
       >
         <SpecialOccasionBoard
           occasion={permanentOccasion}
+          boardDate={data.date}
           comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
           fullscreen
         />
@@ -278,6 +279,7 @@ export function BoardShell({
       >
         <SpecialOccasionBoard
           occasion={periodicOccasion}
+          boardDate={data.date}
           comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
           fullscreen
         />
@@ -362,7 +364,7 @@ export function BoardShell({
       ) : (
         <>
           {inlineOccasion ? (
-            <SpecialOccasionBoard occasion={inlineOccasion} />
+            <SpecialOccasionBoard occasion={inlineOccasion} boardDate={data.date} />
           ) : showKeys ? (
             <KeyPanel duties={data.keys} />
           ) : (
