@@ -71,8 +71,10 @@ export function BoardShell({
   const [showing, setShowing] = useState<Interrupt | null>(null);
   const [cycleAnchor, setCycleAnchor] = useState<number | null>(null);
   const [permIndex, setPermIndex] = useState(0);
-  const [periodicIndex, setPeriodicIndex] = useState(0);
-  const [periodicOccasionIndex, setPeriodicOccasionIndex] = useState(0);
+  // Start at -1: each burst pre-increments, so the first burst shows item 0
+  // rather than skipping straight to item 1.
+  const [periodicIndex, setPeriodicIndex] = useState(-1);
+  const [periodicOccasionIndex, setPeriodicOccasionIndex] = useState(-1);
 
   const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
   const event = data.events[0] ?? null;
@@ -139,8 +141,11 @@ export function BoardShell({
 
   useEffect(() => {
     const due = queueKey ? (queueKey.split(",") as Interrupt[]) : [];
+    // Re-arming (a kind appeared or vanished, or the pace changed) also clears
+    // any burst still up: its hide timer dies with the old effect, and without
+    // this the burst would hold the screen until the next interval tick.
+    setShowing(null);
     if (due.length === 0) {
-      setShowing(null);
       setCycleAnchor(null);
       return;
     }
@@ -149,6 +154,9 @@ export function BoardShell({
     let turn = 0;
     let hide: ReturnType<typeof setTimeout>;
     const cycle = setInterval(() => {
+      // With Full Screen Time ≥ the interval the previous burst's hide timer
+      // would fire into the new burst and cut it short — supersede it instead.
+      clearTimeout(hide);
       const next = due[turn++ % due.length];
       setShowing(next);
       // Advance through the periodic slides so each burst shows the next one.
@@ -214,9 +222,11 @@ export function BoardShell({
   }, [screenId]);
 
   // If the server itself failed to reach the Sheet, fall back to the last copy
-  // this screen saw today rather than showing an empty board.
+  // this screen saw today rather than showing an empty board. Keyed on the
+  // explicit failure flag, not on an empty list — a genuinely quiet day must
+  // not resurrect rows that were deleted from the sheet earlier today.
   useEffect(() => {
-    if (initial.substitutions.length > 0) {
+    if (!initial.substitutionsUnavailable) {
       writeCache(initial);
       return;
     }

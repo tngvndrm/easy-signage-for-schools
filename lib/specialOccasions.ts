@@ -83,7 +83,12 @@ export async function readSpecialOccasions(today: string): Promise<{
   const groups = new Map<string, OccasionGroup>();
   const order: string[] = [];
 
-  // Inherited state: blank cells carry the previous row's values.
+  // Inherited state: blank cells carry the previous row's values — but only
+  // within one occasion. A row that starts a new date/title pair starts fresh,
+  // so a new occasion can't silently inherit the previous one's display window
+  // or Big Slide mode (blank means "always show" / "no takeover", as in the
+  // Mededelingen tab).
+  let lastKey: string | null = null;
   let lastEventDate: string | null = null;
   let lastTitle: string | null = null;
   let lastDisplayFrom: string | null = null;
@@ -102,24 +107,33 @@ export async function readSpecialOccasions(today: string): Promise<{
 
     const eventDate: string | null = normalizeDate(rawDate) ?? lastEventDate;
     const title: string | null = rawTitle || lastTitle;
-    const displayFrom: string | null = normalizeDate(rawFrom) ?? lastDisplayFrom;
-    const displayTo: string | null = normalizeDate(rawTo) ?? lastDisplayTo;
+    const key = eventDate && title ? `${eventDate}|${title}` : null;
+    const sameGroup = key !== null && key === lastKey;
+
+    const displayFrom: string | null =
+      normalizeDate(rawFrom) ?? (sameGroup ? lastDisplayFrom : null);
+    const displayTo: string | null =
+      normalizeDate(rawTo) ?? (sameGroup ? lastDisplayTo : null);
     const bigSlide: "periodic" | "permanent" | undefined = rawBigSlide
       ? parseBigSlide(rawBigSlide)
-      : lastBigSlideExplicit
+      : sameGroup && lastBigSlideExplicit
         ? lastBigSlide
         : undefined;
 
     if (eventDate) lastEventDate = eventDate;
     if (title) lastTitle = title;
-    if (displayFrom) lastDisplayFrom = displayFrom;
-    if (displayTo) lastDisplayTo = displayTo;
+    if (key) lastKey = key;
+    lastDisplayFrom = displayFrom;
+    lastDisplayTo = displayTo;
     if (rawBigSlide) {
       lastBigSlide = bigSlide;
       lastBigSlideExplicit = true;
+    } else if (!sameGroup) {
+      lastBigSlide = undefined;
+      lastBigSlideExplicit = false;
     }
 
-    if (!eventDate || !title) continue;
+    if (!key || !eventDate || !title) continue;
 
     // Skip rows whose display window doesn't cover today.
     if (displayFrom && today < displayFrom) continue;
@@ -148,7 +162,6 @@ export async function readSpecialOccasions(today: string): Promise<{
       ...(location ? { location } : {}),
     };
 
-    const key = `${eventDate}|${title}`;
     if (!groups.has(key)) {
       groups.set(key, { eventDate, title, bigSlide, entries: [] });
       order.push(key);
