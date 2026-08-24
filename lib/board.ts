@@ -110,6 +110,11 @@ export async function getBoardData(
 ): Promise<BoardData> {
   const now = new Date();
   const date = options.date ?? todayInSchoolTz(now);
+  // Show-windows can carry an `HH:MM`, which only means something against a
+  // real clock. Previewing another school day has none, so those readers get
+  // null and treat the previewed day as open all day.
+  const nowMinutes =
+    date === todayInSchoolTz(now) ? minutesInSchoolTz(now) : null;
 
   let substitutions: Substitution[] = demoSubstitutions;
   let keys: KeyDuty[] = demoKeyDuties;
@@ -132,11 +137,11 @@ export async function getBoardData(
         readKeyDuties(date),
         readEvents(date),
         readBirthdays(date),
-        readMessages(date),
+        readMessages(date, nowMinutes),
         readSettings(),
         readSchedule(),
         readStyle(),
-        readSpecialOccasions(date),
+        readSpecialOccasions(date, nowMinutes),
       ]);
 
     if (subs.status === "fulfilled") {

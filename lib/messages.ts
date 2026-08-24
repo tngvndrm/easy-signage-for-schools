@@ -6,6 +6,8 @@ import {
   MissingTabError,
   normalizeDate,
   normalizeText,
+  parseClock,
+  withinWindow,
 } from "./sheets";
 import type { BoardMessage } from "./types";
 
@@ -21,7 +23,7 @@ function parseBigSlide(raw: string): "periodic" | "permanent" | undefined {
   return undefined;
 }
 
-const MESSAGES_RANGE = process.env.MESSAGES_SHEET_RANGE ?? "Mededelingen!A1:H200";
+const MESSAGES_RANGE = process.env.MESSAGES_SHEET_RANGE ?? "Mededelingen!A1:J200";
 
 /**
  * The rotating notices — pickup calls, reminders, fundraiser posters. Each has
@@ -32,21 +34,56 @@ const MESSAGES_RANGE = process.env.MESSAGES_SHEET_RANGE ?? "Mededelingen!A1:H200
 const COLUMNS = {
   titel: ["titel", "title", "kop"],
   tekst: ["tekst", "bericht", "body", "inhoud", "text"],
-  van: ["van", "vanaf", "start", "toonvanaf"],
-  tot: ["tot", "totenmet", "einde", "end"],
+  // Bare "Weergave" too: it's what a column headed "Weergave Startdatum"
+  // shortens to in practice, and left unmatched the start bound silently
+  // disappears rather than failing loudly.
+  van: [
+    "weergavestartdatum",
+    "weergavestart",
+    "weergave",
+    "van",
+    "vanaf",
+    "start",
+    "toonvanaf",
+  ],
+  tot: ["weergaveeinddatum", "tot", "totenmet", "einde", "end"],
+  vanTijd: [
+    "weergavestartuur",
+    "weergavestarttijd",
+    "vantijd",
+    "vanaftijd",
+    "starttijd",
+    "beginuur",
+    "vanuur",
+  ],
+  totTijd: [
+    "weergaveeinduur",
+    "weergaveeindtijd",
+    "tottijd",
+    "eindtijd",
+    "einduur",
+    "totuur",
+  ],
   afbeelding: ["afbeelding", "beeld", "artwork", "image", "poster"],
   cover: ["volledigbeeld", "volledig", "cover", "fullbleed", "grootbeeld"],
   bigSlide: ["bigslide", "grootscherm", "volledigscherm", "takeover", "overname"],
 };
 
 /**
- * Messages whose show-window covers today, in sheet order.
+ * Messages whose show-window covers now, in sheet order.
  *
- * `Van`/`Tot` are both optional: a blank `Van` means "from now", a blank `Tot`
- * means "until removed". An item with neither is always shown. This is what
+ * The weergave dates are both optional: a blank start means "from now", a blank
+ * end means "until removed". An item with neither is always shown. This is what
  * lets staff queue a fundraiser weeks ahead and never come back to clear it.
+ *
+ * `Weergave Startuur`/`Einduur` are optional too, and sharpen their own
+ * boundary day into a moment — see `withinWindow`. `nowMinutes` is null when
+ * another day is being previewed, where the hours don't apply.
  */
-export async function readMessages(today: string): Promise<BoardMessage[]> {
+export async function readMessages(
+  today: string,
+  nowMinutes: number | null,
+): Promise<BoardMessage[]> {
   let rows: string[][];
   try {
     rows = await fetchRange(MESSAGES_RANGE);
@@ -70,10 +107,15 @@ export async function readMessages(today: string): Promise<BoardMessage[]> {
     const body = cell(columns.tekst);
     if (!title && !body) continue;
 
-    const from = normalizeDate(cell(columns.van));
-    const until = normalizeDate(cell(columns.tot));
-    if (from && today < from) continue;
-    if (until && today > until) continue;
+    const from = {
+      date: normalizeDate(cell(columns.van)),
+      minutes: parseClock(cell(columns.vanTijd)),
+    };
+    const until = {
+      date: normalizeDate(cell(columns.tot)),
+      minutes: parseClock(cell(columns.totTijd)),
+    };
+    if (!withinWindow(today, nowMinutes, from, until)) continue;
 
     const imageUrl = directImageUrl(cell(columns.afbeelding));
     const bigSlide = parseBigSlide(cell(columns.bigSlide));

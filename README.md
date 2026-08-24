@@ -177,14 +177,27 @@ The rotating notices — pickup calls, reminders, fundraiser posters — come fr
 the `Mededelingen` tab. Each has an optional show-window, so an item puts itself
 up and takes itself down instead of someone remembering to delete it.
 
-| Titel | Tekst | Van | Tot | Afbeelding | Volledig beeld | Big Slide |
-| --- | --- | --- | --- | --- | --- | --- |
-| Afhalen | Lotte (7A) … | | | | FALSE | No |
-| Wafelverkoop 6A | Steun de bosklassen … | 01/09/2026 | 05/09/2026 | *(Drive link)* | TRUE | No |
-| Fijn verlof! | We zien elkaar terug op 1 september. | 04/07 | 31/08 | | | Permanent |
+| Titel | Tekst | Weergave Startdatum | Weergave Startuur | Weergave Einddatum | Weergave Einduur | Afbeelding | Volledig beeld | Big Slide |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Afhalen | Lotte (7A) … | | | | | | FALSE | No |
+| Wafelverkoop 6A | Steun de bosklassen … | 01/09/2026 | | 05/09/2026 | | *(Drive link)* | TRUE | No |
+| Oudercontact | Onthaal in de hal. | 05/09/2026 | 17:00 | 05/09/2026 | 20:30 | | | No |
+| Fijn verlof! | We zien elkaar terug op 1 september. | 04/07 | | 31/08 | | | | Permanent |
 
-- **Van / Tot** are optional. Blank `Van` = from now; blank `Tot` = until
-  removed; neither = always shown. Same forgiving date formats as the rest.
+- **Weergave Startdatum / Einddatum** are optional. Blank start = from now;
+  blank end = until removed; neither = always shown. Same forgiving date formats
+  as the rest.
+- **Weergave Startuur / Einduur** are optional too, written `HH:MM`. Each
+  sharpens *its own* date into a moment, so a notice can go up at 17:00 and come
+  down at 20:30 rather than sitting there from midnight. Leave them blank and
+  nothing changes — the item covers its whole days as before.
+  - The end hour is exclusive: `20:30` means it's gone *by* 20:30.
+  - Over several days, the hours gate only the first and last day. `01/09 10:00`
+    → `03/09 11:30` covers the 2nd in full.
+  - An hour with no date beside it counts as today's, so it comes back round the
+    next day. For a genuine one-off, fill in the date too.
+  - Screens re-read the sheet every 30 seconds, so a timed item appears (and
+    goes) within half a minute of the hour you set.
 - **Afbeelding** is a Drive share link, rewritten to a direct image the same way
   event posters are (share it "anyone with the link").
 - **Volledig beeld** is a tickbox (`TRUE`/`x`/`ja`). Ticked *and* with an image,
@@ -196,7 +209,7 @@ up and takes itself down instead of someone remembering to delete it.
   - blank / `No` — stays a card in the rotation.
   - `Yes` — full-screen in short bursts every few minutes; the dashboard stays
     visible between bursts, like an event poster.
-  - `Permanent` — held full-screen for the whole `Van`–`Tot` window, hiding the
+  - `Permanent` — held full-screen for the whole weergave window, hiding the
     dashboard. For "welcome back" / holiday messages where nothing else matters.
     Several at once rotate.
   (Reads `Yes`/`Ja` and `Permanent`/`Vast` loosely; a data-validation dropdown
@@ -385,20 +398,51 @@ dormant and the rest of the board is unaffected. The header rows:
 | Tab | Header |
 | --- | --- |
 | `Vervangingen` | `Datum · Lesuur · Klas · Afwezige Leerkracht · Vervanging · Inhoud · Lokaal` |
-| `Mededelingen` | `Titel · Tekst · Van · Tot · Afbeelding · Volledig beeld · Big Slide` |
+| `Mededelingen` | `Titel · Tekst · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · Afbeelding · Volledig beeld · Big Slide` |
 | `Evenementen` | `Datum · Tijd · Toon vanaf · Klas · Titel · Synopsis · Poster` |
 | `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
 | `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
 | `Style` | `Logo · School` + a `Color Name / Color Code` table |
+| `Speciale Gelegenheden` | `Datum · Titel · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · BigSlide · Tijd van · Tijd tot · Activiteit · Begeleider · Info · Locatie` |
+
+`Speciale Gelegenheden` carries two pairs of times, and they do different jobs.
+**Weergave Startuur / Einduur** decide when the board itself goes up and comes
+down — the same optional `HH:MM` as on `Mededelingen` above. **Tijd van / Tijd
+tot** are the programme's own hours, one row per item (08:00 Opening, 09:30 100m
+loop), and they're what the board prints and runs its now-marker against. A
+sports day whose programme starts at 08:00 usually wants a weergave start a
+little earlier, so the board is already up when people walk in.
+
+An occasion is one board made of many programme rows, so **its window is read
+from the first row — the one that names the Datum and Titel** — and the weergave
+cells on the continuation rows below are ignored. They're free to be blank,
+stale, or left over from a copy-paste without putting the board up early.
 
 Importable CSV starting points for every tab are in
 [`docs/sheet-template/`](docs/sheet-template) — File → Import in Google Sheets,
 one per tab, keeping the tab names above. Ranges are set in `.env.example`.
 
+**A range has to be wide enough for the columns you added.** Sheets returns only
+the cells inside it, so a column past the end reads as blank — and a blank
+weergave hour isn't an error, it just means "no hour", which looks exactly like
+the feature not working. If a deployment pins these in its own `.env.local`
+rather than taking the defaults, widen them there too:
+
+| | Was | Now |
+| --- | --- | --- |
+| `MESSAGES_SHEET_RANGE` | `Mededelingen!A1:H200` | `Mededelingen!A1:J200` |
+| `SPECIAL_OCCASIONS_RANGE` | `Speciale Gelegenheden!A1:K400` | `Speciale Gelegenheden!A1:M400` |
+
+The same trap bit the `Settings` tab earlier: it's ten columns wide, so a pinned
+`Settings!A1:H30` silently drops `Full Screen Interval` and `Full Screen Time`
+and the board quietly falls back to its built-in pace. `Settings!A1:L30`.
+
 Append `?date=2026-09-02` to a screen URL (or `/api/board`) to render another
-school day — useful for checking entries before the day arrives.
+school day — useful for checking entries before the day arrives. A previewed day
+has no clock of its own, so the weergave hours don't apply to it: everything set
+for that day shows, whatever time you look.
 
 ### Reading a staff-maintained sheet
 
