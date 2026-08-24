@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Mac server: starts the Infoborden server at login and restarts it if it dies.
+  Install (replacing __REPO__ with the repo's absolute path):
+
+    sed "s|__REPO__|$HOME/infoborden|" deploy/infoborden.launchagent.plist \
+      > ~/Library/LaunchAgents/local.infoborden.plist
+    launchctl load ~/Library/LaunchAgents/local.infoborden.plist
+
+  `bash -lc` so Homebrew's node (outside launchd's default PATH) is found.
+  Logs land in /tmp/infoborden.log.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.infoborden</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>cd "__REPO__" &amp;&amp; set -a &amp;&amp; source .env.local &amp;&amp; PORT=3000 exec node .next/standalone/server.js</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/infoborden.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/infoborden.log</string>
+</dict>
+</plist>

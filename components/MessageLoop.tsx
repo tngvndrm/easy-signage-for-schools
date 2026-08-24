@@ -84,14 +84,19 @@ export function MessageLoop({
     setRestart((r) => r + 1);
   }, []);
 
+  // Primitive deps only: `slides` (and so `current`) is rebuilt every render,
+  // and the 30-second poll re-renders even when nothing changed — depending on
+  // the object identity would restart this timer on every poll, freezing the
+  // rotation whenever the cycle time exceeds the poll interval.
+  const currentSeconds =
+    (current?.kind === "message" ? current.message.durationSec : undefined) ??
+    durationSec;
+
   useEffect(() => {
     if (!interactive) return;
-    const seconds =
-      (current?.kind === "message" ? current.message.durationSec : undefined) ??
-      durationSec;
-    const timer = setTimeout(() => setIndex((i) => i + 1), seconds * 1000);
+    const timer = setTimeout(() => setIndex((i) => i + 1), currentSeconds * 1000);
     return () => clearTimeout(timer);
-  }, [current, durationSec, interactive, safeIndex, restart]);
+  }, [currentSeconds, interactive, safeIndex, restart]);
 
   // Arrow keys for anyone reading the board at their desk. The kiosk has no
   // keyboard, so this costs it nothing.

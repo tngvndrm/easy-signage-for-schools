@@ -90,7 +90,7 @@ const WEEKDAY_INDEX: Record<string, number> = {
 };
 
 /** Read the school's wall clock, not the server's. */
-function schoolTime(now: Date): { day: number; minutes: number } {
+export function schoolTime(now: Date = new Date()): { day: number; minutes: number } {
   const found: Record<string, string> = {};
   for (const part of parts.formatToParts(now)) found[part.type] = part.value;
 

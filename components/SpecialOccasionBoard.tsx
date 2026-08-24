@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { parseTimeOverride } from "@/lib/schedule";
+import { parseTimeOverride, schoolTime } from "@/lib/schedule";
 import type { SpecialOccasion, SpecialOccasionEntry } from "@/lib/types";
 import { Clock } from "./Clock";
 
 const TICK_MS = 10_000;
 const MIN_SCALE = 0.55;
 
+// The school's wall clock, like every other now-marker — not the viewing
+// device's, which may sit in another timezone when previewing from a desk.
 function nowMinutes(): number {
-  const d = new Date();
-  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+  return schoolTime().minutes;
 }
 
 function rowScale(rowCount: number, comfortable: number): number {

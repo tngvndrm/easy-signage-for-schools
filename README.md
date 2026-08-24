@@ -16,7 +16,7 @@ database or login to build or run.
 | Styling | **Tailwind CSS v4 + Steinerschool Gent tokens** | Brand colours, Averia typeface and the organic radii live as CSS variables in `app/globals.css`. |
 | Data | **Google Sheets API v4** (read-only, service account) | One sheet, one tab per feature. Staff edit a sheet they already know; nothing to run. |
 | Images | **Google Drive links** | Posters/artwork are Drive share links, rewritten to direct images by the reader. No upload pipeline. |
-| Hosting | **One LAN host** (small Pi, Next standalone under systemd) | Kept on the school network so student names never leave the building. See [`docs/deploy-lan.md`](docs/deploy-lan.md). |
+| Hosting | **On the school LAN** (Next standalone — on a Pi/Mac/Windows server, or on the display Pi itself) | Student names never leave the building. See [`docs/install.md`](docs/install.md). |
 | Screens | **Raspberry Pi + cage** kiosk | Pi OS Lite boots straight into one full-screen Chromium. No desktop. |
 
 Deliberately *not* used: no state manager, no component library, no CMS, no
@@ -53,6 +53,7 @@ hairline along the bottom edge shows where the screen is in that cycle. See
 | `?keypanel=1`, `?keys=3` | the classroom-key panel / the in-rotation key card |
 | `?event=1` | the event poster (sample if none scheduled) |
 | `?takeover=1` | a Big Slide full-screen takeover (sample) |
+| `?occasion=1` | the special-occasion board (sample if none scheduled) |
 
 ### Look & feel
 
@@ -328,8 +329,8 @@ row per screen (`Display` = 1/2/3):
   before the dashboard returns. Default 20.
 - All three are per screen, and blank or unparseable means "use the default", so
   a typo slows nothing down.
-- `Turn Off` / `Turn On` are read by the separate TV-power (CEC) feature, not
-  the board.
+- `Turn Off` / `Turn On` are reserved for the TV-power (CEC) feature
+  ([`pi/tv-power/`](pi/tv-power)); nothing reads them yet.
 
 `?theme=` / `?accent=` on a screen URL still override, for previewing. Changes to
 the tab land on the next poll — no reload needed.
@@ -376,6 +377,9 @@ needing a Google account:
    (gitignored). Set `GOOGLE_APPLICATION_CREDENTIALS=./service-account.json`
    (use an **absolute** path on the LAN host — see the deploy guide).
 2. Share the sheet with that service account's email address as **Viewer**.
+   If your Workspace blocks sharing outside the domain, create the Cloud
+   project (and so the service account) under the school's own Workspace
+   organisation, or have an admin allow-list the account.
 3. Set `SHEET_ID` in `.env.local`. `npm run check:sheet` verifies each step and
    prints the service-account address to share with.
 
@@ -391,6 +395,7 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
 | `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
+| `Speciale Gelegenheden` | `Datum · Titel · Toon vanaf · Toon tot · BigSlide · Tijd van · Tijd tot · Activiteit · Begeleider · Info · Locatie` |
 | `Style` | `Logo · School` + a `Color Name / Color Code` table |
 
 Importable CSV starting points for every tab are in
@@ -421,8 +426,8 @@ uniform:
 - `1-2`, `1 & 2`, `1 en 2` all render as **1 & 2**, marked live through both.
 - A blank `Lesuur` or `Datum` inherits the row above, so merged cells keep
   working — filling every row is still recommended.
-- A literal `pauze` row is ignored — the board draws the divider itself from
-  `BREAK_AFTER_PERIOD`.
+- A literal `pauze` row is ignored — the board draws its own dividers from the
+  `Schedule` tab (or the built-in default timetable).
 - `Inhoud` (the substitution task) shows beside the substitute: short values
   like `Zelfstudie` as a pill, longer ones as text; `nvt`/`-` show nothing.
 - An empty `Vervanging` renders as an **Info volgt** chip — never "no class", so
@@ -431,9 +436,12 @@ uniform:
 
 ## Deploying
 
-Kept on the school LAN — one small host serves all three screens and nothing is
-exposed to the internet. Full runbook, including the cage kiosk setup for the
-display Pis, in **[`docs/deploy-lan.md`](docs/deploy-lan.md)**.
+Everything stays on the school LAN — nothing is exposed to the internet. Two
+setups are supported: **standalone** (the display Pi runs the server itself)
+and **server–client** (one server — a Pi, Mac or Windows machine — feeding
+every display Pi). The full install guide, covering both modes plus the cage
+kiosk setup and per-section troubleshooting, is
+**[`docs/install.md`](docs/install.md)**.
 
 The screens must load the **production** build (`./scripts/build-standalone.sh`
 or `npm run start`), never `npm run dev` — dev-mode hydration doesn't run
@@ -441,6 +449,9 @@ reliably in the Pi's Chromium.
 
 ## Not built yet
 
-- **TV on/off scheduling** (HDMI-CEC) — tracked separately.
+- **TV on/off scheduling** (HDMI-CEC) — a standalone Pi-side agent lives in
+  [`pi/tv-power/`](pi/tv-power), driven by a local schedule file on each Pi.
+  It is not wired to the sheet; the Settings tab's `Turn Off` / `Turn On`
+  columns are reserved for it but currently unread.
 - **OneRoster birthdays** — deferred in the spec; moot now that the birthday
   list lives in the sheet.

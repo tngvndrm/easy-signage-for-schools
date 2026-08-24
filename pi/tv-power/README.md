@@ -4,8 +4,8 @@ Turns the attached TV on and off on a schedule, over HDMI-CEC, from the Raspberr
 that already drives it. No extra hardware, no smart plug — the same HDMI cable that
 carries the picture carries the power commands.
 
-The schedule is authored once in the admin UI and served per screen; each Pi polls it,
-caches it locally, and keeps working to the last-known schedule if the network drops.
+The schedule lives in a JSON file on each Pi (`/etc/infoborden/tv-power-schedule.json`)
+— edit it there; the format is documented below.
 
 ---
 
@@ -91,9 +91,9 @@ systemd timer that ticks once a minute.
 sudo nano /etc/infoborden/tv-power.conf
 ```
 
-At minimum set `SCREEN_ID` (1, 2 or 3) and `TIMEZONE`. Leave `SCHEDULE_URL` empty until
-the server side exists — the agent will then run purely off
-`/etc/infoborden/tv-power-schedule.json`, which is the same JSON format.
+At minimum set `SCREEN_ID` (1, 2 or 3) and `TIMEZONE`. Leave `SCHEDULE_URL` empty —
+the agent runs off `/etc/infoborden/tv-power-schedule.json`. Then put the real
+on/off times in that file (the installer seeded it with the example schedule).
 
 ## Step 4 — Verify
 
@@ -165,22 +165,6 @@ Same install, only `SCREEN_ID` differs.
   keeps the screen up past midnight.
 - A missing day key means off all day.
 
-## Server contract (for when the admin UI lands)
-
-The Pi does a plain `GET` on `SCHEDULE_URL`, with `{screen}` substituted for `SCREEN_ID`:
-
-```
-GET /api/screens/1/power-schedule
-Accept: application/json
-Authorization: Bearer <SCHEDULE_TOKEN>   # only if SCHEDULE_TOKEN is set
-```
-
-The response body is exactly the JSON above. Anything else the agent can't parse is
-ignored in favour of the cached copy, so a broken deploy can't blank the screens.
-
-Refetched at most every `SCHEDULE_TTL` seconds (default 10 min), cached at
-`/var/lib/infoborden/tv-power-schedule.cache.json`.
-
 ## How it behaves
 
 - **It only acts on change.** The one-minute tick is a no-op unless the desired state
@@ -191,8 +175,9 @@ Refetched at most every `SCHEDULE_TTL` seconds (default 10 min), cached at
   every minute.
 - **Chromium keeps running** while the TV sleeps. The board is already rendered when the
   screen wakes, so there's no boot-up or blank-page moment in the morning.
-- **Offline is fine.** Cached schedule, then local file, then "always on" as the last
-  resort — a network outage never leaves the hall with a dark screen for an unknown reason.
+- **A broken schedule fails safe.** If the schedule file is missing or invalid, the
+  agent falls back to "always on" — a bad edit never leaves the hall with a dark
+  screen for an unknown reason.
 
 ## If your TV refuses to wake over CEC
 
@@ -230,9 +215,9 @@ light but not the standby wattage.
 | Works from SSH, not from the timer | Check `journalctl -u infoborden-tv-power`; the unit runs as root by design because `/dev/cec0` isn't world-writable |
 | TV wakes on the wrong input | Leave `CEC_SET_ACTIVE_SOURCE=1`; if it fights another device, set it to `0` |
 | TV turns back on right after someone switches it off | Expected — see re-assert above. Raise `REASSERT_SECONDS`, or set it to `0` |
-| Everything off at odd hours | `sudo infoborden-tv-power status` and check `schedule source` — a stale `cache` or the always-on `fallback` means the server isn't reachable |
+| Everything off at odd hours | `sudo infoborden-tv-power status` and check `schedule source` — it should say `local file`; the always-on `fallback` means the schedule file is missing or invalid |
 | `cec-client` hangs | Another process holds the adapter; `sudo systemctl stop infoborden-tv-power.timer` while testing by hand |
 
-If you also run a nightly auto-reboot (see the Pi setup in `SPEC.md`), schedule it
+If you also run a nightly auto-reboot (see `docs/install.md`, Part 2.3), schedule it
 *inside* the off window — a reboot re-runs the agent 45s after boot and it will
 re-apply whatever the schedule says.

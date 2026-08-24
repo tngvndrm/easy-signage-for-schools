@@ -13,17 +13,24 @@ import { readFileSync, existsSync } from "node:fs";
 import { GoogleAuth } from "google-auth-library";
 
 const KEY_FILE = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "./service-account.json";
-const SHEET_ID =
-  process.env.SHEET_ID ?? "1De7Mx1SSBxRVgWXnzKKB9obKvw5EhGM0QaUrz5tM5v4";
+const SHEET_ID = process.env.SHEET_ID ?? "";
+// Defaults mirror lib/*.ts, so this checks the same ranges the board reads.
 const RANGES = {
   Vervangingen: process.env.SHEET_RANGE ?? "Vervangingen!A1:H400",
-  Sleutels: process.env.KEYS_SHEET_RANGE ?? "Sleutels!A1:F200",
+  Sleutels: process.env.KEYS_SHEET_RANGE ?? "Sleutels!A1:H200",
 };
 
 const ok = (m) => console.log(`  \x1b[32m✓\x1b[0m ${m}`);
 const bad = (m) => console.log(`  \x1b[31m✗\x1b[0m ${m}`);
 const info = (m) => console.log(`    ${m}`);
 const step = (m) => console.log(`\n\x1b[1m${m}\x1b[0m`);
+
+if (!SHEET_ID) {
+  bad("SHEET_ID is not set.");
+  info("Set SHEET_ID in .env.local (the long id from the sheet's URL),");
+  info("then run this again: npm run check:sheet");
+  process.exit(1);
+}
 
 step("1. Service-account key");
 if (!existsSync(KEY_FILE)) {
@@ -131,5 +138,5 @@ if (keys === null) {
 
 if (Array.isArray(subs)) {
   step("Next");
-  info("Uncomment SHEET_ID in .env.local, then restart the dev server.");
+  info("All set — (re)start the dev server and the board reads this sheet.");
 }

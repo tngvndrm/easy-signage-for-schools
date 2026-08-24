@@ -77,7 +77,9 @@ export async function readKeyDuties(today: string): Promise<KeyDuty[]> {
       if (!leg.date || leg.done) continue;
       if (leg.date > today) continue;
       out.push({
-        id: `${klas}-${leg.action}`,
+        // Date included: the same class can be outstanding for two weekends at
+        // once, and the ids double as React keys.
+        id: `${klas}-${leg.action}-${leg.date}`,
         klas,
         student,
         action: leg.action,
