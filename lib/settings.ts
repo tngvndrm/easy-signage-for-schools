@@ -7,7 +7,7 @@ const SETTINGS_RANGE = process.env.SETTINGS_SHEET_RANGE ?? "Settings!A1:L30";
  * Per-screen settings staff can change live from the sheet, no redeploy: a
  * friendly name, an accent colour, the times the board flips between the light
  * and dark theme, and how fast the board paces itself. (Turn Off / Turn On are
- * read by the separate TV-power feature, not here.)
+ * reserved for the TV-power feature and not read by anything yet.)
  */
 export type ScreenSettings = {
   name: string | null;

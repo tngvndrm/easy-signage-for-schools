@@ -4,9 +4,9 @@
 # Which screen this Pi is (1, 2 or 3). Substituted into SCHEDULE_URL.
 SCREEN_ID=1
 
-# Where to pull the schedule from. Leave empty to use only the local
-# /etc/infoborden/tv-power-schedule.json file.
-SCHEDULE_URL=https://infoborden.example.org/api/screens/{screen}/power-schedule
+# Optional central schedule server. None exists today — leave empty and the
+# agent runs off the local /etc/infoborden/tv-power-schedule.json file.
+SCHEDULE_URL=
 SCHEDULE_TOKEN=
 # How long a cached schedule stays fresh, in seconds.
 SCHEDULE_TTL=600
