@@ -88,15 +88,6 @@ fine; the value is read as a literal path, not shell-quoted.
 
 ```
 SHEET_ID=1De7Mx1SSBxRVgWXnzKKB9obKvw5EhGM0QaUrz5tM5v4
-SHEET_RANGE=Vervangingen!A1:H400
-KEYS_SHEET_RANGE=Sleutels!A1:H200
-EVENTS_SHEET_RANGE=Evenementen!A1:H100
-MESSAGES_SHEET_RANGE=Mededelingen!A1:H200
-BIRTHDAYS_SHEET_RANGE=Verjaardagen!A1:F1000
-SETTINGS_SHEET_RANGE=Settings!A1:L30
-SCHEDULE_SHEET_RANGE=Schedule!A1:E50
-STYLE_SHEET_RANGE=Style!A1:C40
-SPECIAL_OCCASIONS_RANGE=Speciale Gelegenheden!A1:K400
 GOOGLE_APPLICATION_CREDENTIALS=C:\infoborden\service-account.json
 TIMEZONE=Europe/Brussels
 LOCALE=nl-BE
@@ -108,6 +99,12 @@ ACCENT=coral
 There is no `EnvironmentFile=` here, so the file is loaded by Node itself with
 `--env-file` in steps 5 and 6. Don't put `.env.local` inside
 `.next\standalone\` — every rebuild wipes that directory.
+
+**Leave the per-tab `*_RANGE` lines out** unless your tabs are named
+differently. The defaults live in the code and widen as features add columns;
+a range pinned in `.env.local` does not, and a range that stops short of a new
+column turns that feature off silently — see
+[Why a feature stopped showing](install.md#why-a-feature-stopped-showing).
 
 Verify the Sheets wiring before going further; it names the exact next step for
 whatever isn't done yet, and prints the service-account address to share the

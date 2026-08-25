@@ -456,6 +456,57 @@ If a screen's stamp is still behind a few minutes after a deploy (with
   showing "Geen verbinding" within five minutes; check the network first, then
   `systemctl restart infoborden-kiosk` on that Pi.
 
+## Why a feature stopped showing
+
+If the build stamp is current and a feature still doesn't appear — Big Slide
+messages never interrupt, a show-window's *hour* is ignored, the cycle
+hairline is missing its dots — the usual cause is not the code but **how much
+of the sheet the server reads**.
+
+Each tab is fetched as a fixed rectangle (`Mededelingen!A1:J200`). Columns to
+the right of that rectangle don't arrive, and the reader can't tell a column
+that's absent from one that's out of range: it matches columns by their header
+name and quietly treats anything it can't find as blank. A feature whose
+column falls outside the range therefore switches off **without an error
+anywhere** — nothing in the journal, and `check:sheet` won't catch it either.
+
+Two ways to walk into it:
+
+- **A pinned range in `.env.local`.** The defaults live in the code and widen
+  when a feature adds a column; a `*_RANGE` line copied into `.env.local` at
+  install time stays as it was. This is the common one — it means the feature
+  works on a fresh install and not on yours.
+- **Columns appended at the far right of the tab.** Adding *Weergave Startuur*
+  after the last column rather than beside *Weergave Startdatum* can put it
+  past the range even with the defaults. Column *order* never matters (headers
+  are matched by name), only how far right it sits.
+
+Check what the server actually reads:
+
+```bash
+grep RANGE /opt/infoborden/.env.local
+```
+
+The safe fix is to **delete those lines** and restart — the code defaults are
+correct by construction, and only a differently *named* tab needs an override:
+
+```bash
+sudo systemctl restart infoborden
+```
+
+If your tabs genuinely need overrides, widen the letter generously (`A1:Z400`
+costs nothing) rather than matching today's last column.
+
+Confirm the column arrived by checking the payload the screens see — a Big
+Slide message, for instance, shows up as a periodic slide:
+
+```bash
+curl -s http://infobord.local/api/board | grep -c '"periodicSlides":\[\]'
+```
+
+`1` means the server is serving none, `0` means at least one is getting
+through.
+
 # Moving a Pi to a different Wi-Fi network
 
 New building, new access point, or the school rotated the Wi-Fi password — this
