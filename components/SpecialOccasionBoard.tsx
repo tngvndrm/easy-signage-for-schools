@@ -85,10 +85,15 @@ function PauzeDivider({
 
 export function SpecialOccasionBoard({
   occasion,
+  boardDate,
   comfortableRows = 7,
   fullscreen = false,
 }: {
   occasion: SpecialOccasion;
+  /** The date the board is showing (school tz, ISO). The "Nu" indicator only
+   * runs when it matches the occasion's own date — a schedule published days
+   * ahead shows the plan without pretending it's live. */
+  boardDate: string;
   comfortableRows?: number;
   /** Full-screen (Permanent / Yes): the global header is gone, so the board
    * carries the date at header size and shows the clock. */
@@ -98,6 +103,12 @@ export function SpecialOccasionBoard({
   const [nowProgress, setNowProgress] = useState(0);
 
   useEffect(() => {
+    // A schedule shown ahead of its day: no live row, just the plan.
+    if (occasion.eventDate !== boardDate) {
+      setNowIndex(-1);
+      return;
+    }
+
     const override = new URLSearchParams(window.location.search).get("now");
     const frozen = override ? parseTimeOverride(override) : null;
 
@@ -128,7 +139,7 @@ export function SpecialOccasionBoard({
     tick(nowMinutes());
     const timer = setInterval(() => tick(nowMinutes()), TICK_MS);
     return () => clearInterval(timer);
-  }, [occasion.entries]);
+  }, [occasion.entries, occasion.eventDate, boardDate]);
 
   const { entries } = occasion;
 

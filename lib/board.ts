@@ -221,10 +221,13 @@ export async function getBoardData(
     keys = keys.slice(0, Math.max(0, options.keyLimit));
   }
 
-  // Show a sample so a layout can be reviewed before real data exists.
+  const label = dateLabel(options.date ? new Date(`${options.date}T12:00:00`) : now);
+
+  // Show a sample so a layout can be reviewed before real data exists. The demo
+  // occasion is dated to the board's own day so its "Nu" indicator stays live.
   if (options.previewEvent && events.length === 0) events = demoEvents;
   if (options.previewOccasion && specialOccasions.length === 0 && periodicSpecialOccasions.length === 0 && permanentSpecialOccasions.length === 0) {
-    specialOccasions = [demoSpecialOccasion];
+    specialOccasions = [{ ...demoSpecialOccasion, eventDate: date, eventDateLabel: label }];
   }
 
   // Big Slides take over the whole screen, so they're pulled out of the small
@@ -242,7 +245,7 @@ export async function getBoardData(
 
   return {
     date,
-    dateLabel: dateLabel(options.date ? new Date(`${options.date}T12:00:00`) : now),
+    dateLabel: label,
     appearance: { theme, accent },
     screenName: set.name,
     timing: {
