@@ -116,7 +116,9 @@ also copies in the static assets that `next build` deliberately leaves out
 - Pi: run it as the service user —
   `sudo -u infoborden bash -c 'cd /opt/infoborden && ./scripts/build-standalone.sh'`
 - Mac: run it in Terminal from the repo directory.
-- Windows: run it in **Git Bash** from the repo directory.
+- Windows: run it in **Git Bash** from the repo directory — or its PowerShell
+  twin, no Git Bash needed:
+  `powershell -ExecutionPolicy Bypass -File scripts\build-standalone.ps1`.
 
 ## 1.3 Credentials and config
 
@@ -201,6 +203,10 @@ program*: `powershell.exe` with arguments
 and tick "Run whether user is logged on or not". Allow inbound connections
 when the Windows Firewall asks (or add a rule for TCP 3000).
 
+On **Windows Server** — IIS holding port 80, pinned execution policy, a proper
+service wrapper instead of Task Scheduler — follow the dedicated runbook:
+[`deploy-windows.md`](deploy-windows.md).
+
 **Check it** — from another machine on the network:
 
 ```bash
@@ -253,10 +259,36 @@ sudo useradd -m -G video,render,input infobordbeheerder
 (If you'd rather run as the user you imaged the Pi with, edit `User=` in
 `infoborden-kiosk.service` and add that user to the same groups.)
 
-Then install the kiosk unit. In Mode A the repo is already at
-`/opt/infoborden`; in Mode B get it onto the Pi the same way as in step 1.1 —
-or copy just the `deploy/` directory to `/opt/infoborden/deploy/` (the kiosk
-only needs that directory: the unit, the launch script and the splash page):
+Then install the kiosk unit. It ships in the repo's `deploy/` directory,
+which must exist at `/opt/infoborden/deploy/` on **this** Pi first:
+
+- **Mode A** — nothing to do: Part 1 already put the whole repo at
+  `/opt/infoborden`.
+- **Mode B** — a display Pi doesn't have the repo yet. If it can reach
+  wherever the repo is hosted, clone it (the kiosk only *reads* `deploy/`, so
+  a root-owned clone is fine — no service user needed here):
+
+  ```bash
+  sudo apt install -y git
+  sudo git clone https://github.com/<org>/<repo>.git /opt/infoborden
+  ```
+
+  If it can't — private repo, no credentials on the Pi — push just the
+  `deploy/` directory (the unit, the launch script and the splash page is all
+  the kiosk needs) across from your laptop, run from the repo directory. Note
+  the target is this display Pi's own hostname or IP, *not* `infobord.local`
+  (that's the server):
+
+  ```bash
+  rsync -a ./deploy/ <user>@<display-pi>:/tmp/infoborden-deploy/
+  ssh <user>@<display-pi> 'sudo mkdir -p /opt/infoborden && sudo rm -rf /opt/infoborden/deploy && sudo mv /tmp/infoborden-deploy /opt/infoborden/deploy'
+  ```
+
+  (`rsync -a` keeps the exec bit on `kiosk-cage.sh`; if the files travel some
+  other way — scp from Windows, a USB stick — put it back:
+  `sudo chmod +x /opt/infoborden/deploy/kiosk-cage.sh`.)
+
+With `deploy/` in place, install the unit (on the Pi):
 
 ```bash
 sudo cp /opt/infoborden/deploy/infoborden-kiosk.service /etc/systemd/system/
@@ -291,6 +323,7 @@ start it:
 
 ```bash
 sudo systemctl set-default multi-user.target
+sudo systemctl daemon-reload
 sudo systemctl enable --now infoborden-kiosk
 ```
 
@@ -352,10 +385,126 @@ sudo systemctl restart infoborden
 # Installed by rsync instead of git? Re-run the rsync, then build.
 ```
 
+The display Pis' `deploy/` files (kiosk unit, launch script, splash) rarely
+change; when they do, on each display Pi: `sudo git -C /opt/infoborden pull`
+(or re-run the rsync from 2.1), re-copy the unit if it changed
+(`sudo cp /opt/infoborden/deploy/infoborden-kiosk.service /etc/systemd/system/ && sudo systemctl daemon-reload`),
+then `sudo systemctl restart infoborden-kiosk`.
+
 **Sheet content** needs none of this — the board picks it up on its next
 30-second poll. A **new build** is different: the screens' browsers only load
 new code on a page load, so it arrives at the nightly reboot — or immediately
 with `sudo systemctl restart infoborden-kiosk` on each display Pi.
+
+# Moving a Pi to a different Wi-Fi network
+
+New building, new access point, or the school rotated the Wi-Fi password — this
+comes up once a year and costs an afternoon if you follow the wrong guide.
+
+**Most tutorials online are out of date.** Editing
+`/etc/wpa_supplicant/wpa_supplicant.conf` does nothing on Pi OS Bookworm: the
+network stack is NetworkManager now, and it ignores that file. If you edited it
+and nothing changed, that's why.
+
+Two notes before you start. The **server** should be on Ethernet if the cabinet
+has a port — it serves every screen, and a cable removes a whole class of
+morning-of failures. And if you SSH into a Pi *over Wi-Fi*, your session dies
+the moment the network switches. Do it over Ethernet, or with a keyboard and
+monitor on the Pi, unless you enjoy surprises.
+
+## With a shell on the Pi
+
+`nmtui` is a text UI — no syntax to get wrong, which matters when you're doing
+this on a stepladder:
+
+```bash
+sudo nmtui
+```
+
+Choose *Activate a connection*, pick the new SSID, type the password.
+
+The same thing without the UI, for when you're doing all four boxes in a row:
+
+```bash
+nmcli device wifi list                                          # what's in range
+sudo nmcli device wifi connect "NEW_SSID" password "NEW_PASSWORD"
+sudo nmcli connection delete "OLD_SSID"                         # stop it competing
+```
+
+Delete the old network. If both are configured and both are reachable — during
+a migration where the old AP is still up — the Pi will happily pick the wrong
+one after a reboot, and you'll be debugging it in November.
+
+Confirm it actually landed, and get the new address:
+
+```bash
+nmcli -t -f NAME,DEVICE connection show --active
+hostname -I
+```
+
+## Check the country code when you change sites
+
+The regulatory domain decides which channels the radio may use; a wrong or
+unset one hides most of the 5 GHz band, and the symptom is "it connects but
+it's slow" rather than a clear error:
+
+```bash
+sudo raspi-config nonint do_wifi_country BE
+```
+
+## When you can't reach the Pi at all
+
+If the Pi is already provisioned, the fastest fix is a keyboard and a monitor —
+genuinely faster than the SD card route, which needs a Linux machine to write
+to the ext4 root partition. macOS and Windows can't mount it without extra
+tooling.
+
+The `custom.toml` trick you'll find online only applies to a **freshly imaged**
+card: the boot partition is read once on first boot and then never again. It's
+worth knowing for when you're building a replacement screen anyway, since it
+saves attaching a keyboard to a new Pi at all — set it in Raspberry Pi Imager's
+advanced options, or write `/boot/firmware/custom.toml` yourself:
+
+```toml
+config_version = 1
+
+[system]
+hostname = "infobord"
+
+[user]
+name = "infobordbeheerder"
+password = "YOUR_PASSWORD"
+password_encrypted = false
+
+[wlan]
+ssid = "NEW_SSID"
+password = "NEW_PASSWORD"
+password_encrypted = false
+country = "BE"
+
+[ssh]
+enabled = true
+```
+
+(`hostname = "infobord"` is for the *server* Pi — a Mode B display Pi should
+get its own name.)
+
+## After the move
+
+The screens find the server by name, so `infobord.local` keeps working on the
+new network without touching `BOARD_URL` — that's the reason Avahi is in step
+1.1. Two things to check anyway:
+
+- **Avahi needs the screens and the server on the same subnet.** mDNS doesn't
+  cross VLANs. If the school put the Pis on a separate device VLAN from where
+  you're testing, the name resolves from the screens but not from your laptop,
+  which looks like a dead server when it isn't. Test from a screen:
+  `curl -I http://infobord.local/api/board`.
+- **Guest networks usually block client-to-client traffic.** The server will
+  reach Sheets fine and the screens will still show "Geen verbinding", because
+  the screens can't reach the server. If that's the only network on offer, ask
+  for a port on the wired VLAN instead — this deployment needs the screens to
+  talk to the server, not to the internet.
 
 # What breaks, and what happens
 

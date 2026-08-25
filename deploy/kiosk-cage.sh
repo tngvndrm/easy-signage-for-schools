@@ -44,12 +44,18 @@ if [ "${1:-}" = "--inner" ]; then
 
   # --disable-features=Translate,TranslateUI belt-and-suspenders with the page's
   # own notranslate meta, so the "Translate?" menu never appears.
+  #
+  # --no-first-run matters on a freshly imaged card: an empty profile otherwise
+  # gets Chromium's first-run screen, which sits in front of the board and wants
+  # a keyboard to dismiss. Nobody is standing at the screen.
   exec chromium \
     --kiosk \
     --ozone-platform=wayland \
     --noerrdialogs \
     --disable-infobars \
     --disable-session-crashed-bubble \
+    --no-first-run \
+    --no-default-browser-check \
     --disable-features=Translate,TranslateUI \
     --check-for-update-interval=31536000 \
     --autoplay-policy=no-user-gesture-required \

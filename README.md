@@ -447,6 +447,10 @@ The screens must load the **production** build (`./scripts/build-standalone.sh`
 or `npm run start`), never `npm run dev` — dev-mode hydration doesn't run
 reliably in the Pi's Chromium.
 
+If the host has to be a Windows Server rather than a Pi, the same setup
+translated — service wrapper, port 80, and the `.local` name that stops
+working — is in **[`docs/deploy-windows.md`](docs/deploy-windows.md)**.
+
 ## Not built yet
 
 - **TV on/off scheduling** (HDMI-CEC) — a standalone Pi-side agent lives in
