@@ -245,19 +245,34 @@ every display Pi.
 
 ## 2.1 Install the kiosk
 
+**When you image the card**, name the login user **`infobordbeheerder`** in
+Raspberry Pi Imager's advanced options, and give the Pi its own hostname (not
+`infobord` — in Mode B that name belongs to the server). The kiosk unit runs
+as that account *by name*, so a card imaged under a different one fails to
+start with `status=217/USER`. Set the Wi-Fi and enable SSH in the same dialog
+while you're there; the `custom.toml` under
+[Moving a Pi to a different Wi-Fi network](#when-you-cant-reach-the-pi-at-all)
+does the same thing in a file if you'd rather write it out.
+
 ```bash
 sudo apt update && sudo apt install -y cage chromium wlrctl
 ```
 
-The kiosk service runs as the user `infobordbeheerder` — create it, in the
-groups that grant access to the GPU and input devices:
+If the card was imaged under that name, the account already exists and only
+needs the groups that grant access to the GPU and input devices:
+
+```bash
+sudo usermod -aG video,render,input infobordbeheerder
+```
+
+If you imaged it under some other name, create the account instead:
 
 ```bash
 sudo useradd -m -G video,render,input infobordbeheerder
 ```
 
-(If you'd rather run as the user you imaged the Pi with, edit `User=` in
-`infoborden-kiosk.service` and add that user to the same groups.)
+(Or keep the name you imaged with, and edit `User=` in
+`infoborden-kiosk.service` to match — either way the two must agree.)
 
 Then install the kiosk unit. It ships in the repo's `deploy/` directory,
 which must exist at `/opt/infoborden/deploy/` on **this** Pi first:
@@ -353,6 +368,7 @@ journalctl -u infoborden-kiosk -b --no-pager | tail -30
 | Symptom | Cause and fix |
 | --- | --- |
 | Unit fails immediately, `status=217/USER` in the journal | The `infobordbeheerder` user doesn't exist — create it as in 2.1 (or fix `User=` in the unit). |
+| Unit restart-loops, `status=203/EXEC` in the journal | systemd can't *execute* `kiosk-cage.sh` — the script never ran, so nothing else in the journal explains it. Two causes, and `ls -l /opt/infoborden/deploy/kiosk-cage.sh` plus `head -1 … \| od -c` tell you which: no `x` in the mode (a copy that dropped it — `sudo chmod +x`), or the first line ending in `\r \n` (Windows line endings — `sudo sed -i 's/\r$//'` on the file). Cloning with git on the Pi avoids both. |
 | `Permission denied` on `/dev/dri` or input devices | The seat session didn't grant device access. `sudo usermod -aG video,render,input infobordbeheerder`, then reboot. |
 | A login prompt appears instead of the board | The Pi still boots to a getty or desktop. `sudo systemctl set-default multi-user.target`, check the unit is enabled, reboot. |
 | Blank window, service running | Chromium reached the compositor but not the board. Check `BOARD_URL` (typo, wrong port, wrong mode row above) and test it: `curl -I "$BOARD_URL"`. |
