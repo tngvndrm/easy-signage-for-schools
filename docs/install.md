@@ -79,7 +79,7 @@ Then put the repo in `/opt/infoborden`. If the Pi can reach wherever the repo
 is hosted (GitHub, a school Git server), clone it:
 
 ```bash
-sudo git clone https://github.com/<org>/<repo>.git /opt/infoborden
+sudo git clone https://github.com/tngvndrm/easy-signage-for-schools.git /opt/infoborden
 sudo chown -R infoborden:infoborden /opt/infoborden
 ```
 
@@ -254,8 +254,10 @@ while you're there; the `custom.toml` under
 [Moving a Pi to a different Wi-Fi network](#when-you-cant-reach-the-pi-at-all)
 does the same thing in a file if you'd rather write it out.
 
+`git` is not on the Pi OS Lite image, so it goes in here too:
+
 ```bash
-sudo apt update && sudo apt install -y cage chromium wlrctl
+sudo apt update && sudo apt install -y git cage chromium wlrctl
 ```
 
 If the card was imaged under that name, the account already exists and only
@@ -279,20 +281,28 @@ which must exist at `/opt/infoborden/deploy/` on **this** Pi first:
 
 - **Mode A** — nothing to do: Part 1 already put the whole repo at
   `/opt/infoborden`.
-- **Mode B** — a display Pi doesn't have the repo yet. If it can reach
-  wherever the repo is hosted, clone it (the kiosk only *reads* `deploy/`, so
-  a root-owned clone is fine — no service user needed here):
+- **Mode B** — a display Pi doesn't have the repo yet. Clone it (the kiosk
+  only *reads* `deploy/`, so a root-owned clone is fine — no service user
+  needed here):
 
   ```bash
-  sudo apt install -y git
-  sudo git clone https://github.com/<org>/<repo>.git /opt/infoborden
+  sudo git clone https://github.com/tngvndrm/easy-signage-for-schools.git /opt/infoborden
   ```
 
-  If it can't — private repo, no credentials on the Pi — push just the
-  `deploy/` directory (the unit, the launch script and the splash page is all
-  the kiosk needs) across from your laptop, run from the repo directory. Note
-  the target is this display Pi's own hostname or IP, *not* `infobord.local`
-  (that's the server):
+  Then check the launch script survived the trip — this is what `203/EXEC`
+  in the table below is about, and a clone is the way to get it right:
+
+  ```bash
+  ls -l /opt/infoborden/deploy/kiosk-cage.sh
+  ```
+
+  You want `-rwxr-xr-x`.
+
+  If the Pi can't reach GitHub — a locked-down network, or the repo has been
+  made private since — push just the `deploy/` directory (the unit, the launch
+  script and the splash page is all the kiosk needs) across from your laptop,
+  run from the repo directory. Note the target is this display Pi's own
+  hostname or IP, *not* `infobord.local` (that's the server):
 
   ```bash
   rsync -a ./deploy/ <user>@<display-pi>:/tmp/infoborden-deploy/

@@ -50,7 +50,7 @@ w32tm /resync
 ## 2. Install the app
 
 ```powershell
-git clone <this-repo> C:\infoborden
+git clone https://github.com/tngvndrm/easy-signage-for-schools.git C:\infoborden
 Set-Location C:\infoborden
 powershell -ExecutionPolicy Bypass -File .\scripts\build-standalone.ps1
 ```
