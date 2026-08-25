@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BigSlide, bigSlideTone } from "./BigSlide";
 import { BirthdayZone } from "./BirthdayZone";
+import { Blackout } from "./Blackout";
 import { BurstProgress } from "./BurstProgress";
 import { LogoMark } from "./LogoMark";
 import { Clock } from "./Clock";
@@ -13,6 +14,7 @@ import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
 import { SpecialOccasionBoard } from "./SpecialOccasionBoard";
 import { SubstitutionBoard } from "./SubstitutionBoard";
+import { useBlackout } from "./useBlackout";
 import { useIdlePointer } from "./useIdlePointer";
 import { BUILD } from "@/lib/build";
 import type { BoardData } from "@/lib/types";
@@ -121,6 +123,8 @@ export function BoardShell({
   // rather than skipping straight to item 1.
   const [periodicIndex, setPeriodicIndex] = useState(-1);
   const [periodicOccasionIndex, setPeriodicOccasionIndex] = useState(-1);
+
+  const blackedOut = useBlackout(data.blackout);
 
   const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
   const event = data.events[0] ?? null;
@@ -299,11 +303,32 @@ export function BoardShell({
   // Between bursts, so a deploy never cuts a full-screen message in half. The
   // page's own state is the build it was compiled from plus the stamp setting
   // it was rendered with — not the current payload, which the poll updates.
+  // Standby counts as quiet, and is in fact the best moment there is: nobody is
+  // in the building to see the reload, and the screen is awake on the new build
+  // by morning.
   useBuildReload(
     serverState,
     stateKey(BUILD, initial.buildStampVisible),
-    showing === null,
+    showing === null || blackedOut,
   );
+
+  /*
+   * Standby outranks every other layout, a permanent takeover included. The
+   * whole point is a dark hall after hours, and a message nobody is there to
+   * read is not a reason to light one. Returning here rather than laying black
+   * over the board also unmounts the zones, so the rotations aren't quietly
+   * cycling to an empty corridor all night — and the morning starts on the
+   * first message rather than wherever the night left off.
+   */
+  if (blackedOut) {
+    return (
+      <Blackout
+        wakesAtMin={data.blackout?.endMin ?? null}
+        screenName={data.screenName}
+        screenId={screenId}
+      />
+    );
+  }
 
   // A "Permanent" Big Slide holds the whole screen for its window — it outranks
   // everything, since it was set for exactly these days on purpose.

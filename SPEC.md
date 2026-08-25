@@ -40,6 +40,10 @@ On specific days, replace the whole layout with one full-screen message instead 
 ## TV power schedule
 The screens shouldn't run 24/7 — they power down outside school hours and wake in the morning.
 
+**Built instead: a blackout screen.** The Pis draw their power from their TV's USB port, so a TV in standby is a Pi with no power — nothing left running to wake it in the morning, and no board rendered when it does. Until the Pis get their own supplies, the board blacks itself out on schedule instead: the panel stays lit, but shows black with one dim line naming the screen and its wake time. Set per screen from the `Settings` tab's `Turn Off` / `Turn On`, evaluated on each Pi's own clock so a host outage can't leave a hall lit all night. Same two times every day; no weekend or holiday handling yet.
+
+The CEC design below still stands for a deployment where the Pis are powered independently, and the agent is written and unused.
+
 - **Mechanism: HDMI-CEC from the Pi.** The Pi sends `standby`/`on` to the TV over the existing HDMI cable, so the TV genuinely goes to standby rather than showing a "no signal" box. No smart plugs (many TVs won't power on again when mains returns, so a plug can't wake the screen). For TVs that disable their CEC receiver in standby, a per-Pi fallback kills the HDMI signal instead.
 - **Agent**: `pi/tv-power/` — a small Python agent run by a systemd timer once a minute. It acts only on state changes, and every ~15 min asks the TV its actual power state and re-asserts only if the TV disagrees (recovers a screen someone switched off with a remote).
 - **Schedule shape**: weekly windows per day (a day may have several, or none = off all day), plus dated `exceptions` that replace the weekly windows for that date — holidays, closure days, and evening events. Windows may cross midnight.
@@ -72,7 +76,8 @@ Alternative considered: hosting on a machine on the school network. Rejected as 
 2. OK with Google Cloud Run + Firestore hosting, or would you rather keep this fully local/offline on school hardware despite the remote-admin-access trade-off?
 3. Confirm the Google Group to gate admin login (does one already exist, e.g. a staff/office group, or do we create `signage-admins@...`)?
 4. Do all 3 screens always show the identical board, or might they ever need to differ?
-6. Do the 3 TVs support HDMI-CEC (needs confirming on the actual hardware — see `pi/tv-power/README.md` step 1), and do all 3 share one on/off schedule?
+6. ~~Do the 3 TVs support HDMI-CEC~~ — moot for now: the Pis are USB-powered from the TVs, so putting a TV into standby cuts the Pi's power with it. The blackout screen covers the need instead. Revisit if the Pis ever get their own supplies, and confirm CEC on the actual hardware then (`pi/tv-power/README.md` step 1).
+7. Should the screens stay dark on weekends and school holidays? That's the one thing the blackout screen doesn't do — the same two times apply every day.
 5. ~~OneRoster for birthdays~~ — deferred, revisit later. v1 uses manual entry.
 
 ## Non-goals (to keep it lean)

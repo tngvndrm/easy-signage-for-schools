@@ -1,5 +1,16 @@
 # TV power schedule
 
+> **Not in use at Steinerschool Gent, and don't switch it on there.** These Pis are
+> powered from their TV's USB port, so putting the TV into standby cuts the Pi's
+> power — and a Pi with no power can't send the `on` command that would wake the TV
+> in the morning. Somebody would have to walk to each screen with a remote.
+>
+> The board blacks itself out on schedule instead: **Standby hours** in the main
+> [README](../../README.md#standby-hours), from the same `Turn Off` / `Turn On`
+> columns. The panel stays lit, which is the cost of the workaround.
+>
+> Everything below stands for a deployment where each Pi has its own power supply.
+
 Turns the attached TV on and off on a schedule, over HDMI-CEC, from the Raspberry Pi
 that already drives it. No extra hardware, no smart plug — the same HDMI cable that
 carries the picture carries the power commands.

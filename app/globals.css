@@ -270,3 +270,28 @@ body {
 .animate-pulse-soft {
   animation: pulse-soft 2.4s ease-in-out infinite;
 }
+
+/* The standby label lands on the same pixels for fourteen hours a night, every
+   night of the school year. It's dim enough not to light the hall, but it still
+   wanders slowly rather than resting anywhere long enough to mark the panel. */
+@keyframes standby-drift {
+  0% {
+    transform: translate(-7rem, -3rem);
+  }
+  25% {
+    transform: translate(6rem, 2.5rem);
+  }
+  50% {
+    transform: translate(5rem, -2.5rem);
+  }
+  75% {
+    transform: translate(-6rem, 3rem);
+  }
+  100% {
+    transform: translate(-7rem, -3rem);
+  }
+}
+
+.animate-standby-drift {
+  animation: standby-drift 900s ease-in-out infinite;
+}

@@ -107,6 +107,25 @@ export type BoardTiming = {
   fullScreenSec: number;
 };
 
+/**
+ * The hours this screen goes dark — a stand-in for really cutting the TV's
+ * power, which we can't do while the Pi draws its own power from the TV's USB
+ * port. Null when the Settings tab leaves the hours blank.
+ *
+ * The window travels to the client rather than just the verdict, because the
+ * screen has to keep the hall dark through a night when the host or the network
+ * is down. `active` is only the server's opinion at render time — the seed for
+ * the first paint, after which the screen judges it against its own clock.
+ */
+export type BlackoutWindow = {
+  /** Minutes-of-day the board goes dark. */
+  startMin: number;
+  /** Minutes-of-day it comes back. */
+  endMin: number;
+  /** Whether the window covered the moment this payload was built. */
+  active: boolean;
+};
+
 export type BoardData = {
   /** ISO date (Europe/Brussels) the substitution rows belong to. */
   date: string;
@@ -116,6 +135,8 @@ export type BoardData = {
   appearance: { theme: "light" | "dark"; accent: "coral" | "gold" | "blue" };
   /** Friendly screen name from the Settings tab, or null to show "Scherm N". */
   screenName: string | null;
+  /** The hours this screen holds a black standby screen; null when unscheduled. */
+  blackout: BlackoutWindow | null;
   /** How fast this screen paces itself, in seconds (Settings tab, with defaults). */
   timing: BoardTiming;
   /** Global branding (logo, colours, font) from the Style tab. */
