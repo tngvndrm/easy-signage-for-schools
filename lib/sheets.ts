@@ -94,6 +94,42 @@ export function parseClock(raw: string): number | null {
   return h * 60 + min;
 }
 
+/**
+ * Is a show-window open right now?
+ *
+ * The dates bound whole days. An optional `HH:MM` sharpens its own boundary day
+ * into a moment, so a notice can go up at 10:00 and come down at 11:30 instead
+ * of occupying the screen from midnight. A time only gates the day its date
+ * names — a window running 05/09 10:00 → 07/09 11:30 covers all of the 6th. A
+ * time with no date beside it applies to today, which also means it re-applies
+ * each day until an end date closes the window.
+ *
+ * `nowMinutes` is null when another school day is being previewed (`?date=`),
+ * where there's no meaningful clock: the window then counts as open all day, so
+ * checking tomorrow's entries doesn't hide half of them.
+ */
+export function withinWindow(
+  today: string,
+  nowMinutes: number | null,
+  from: { date: string | null; minutes: number | null },
+  until: { date: string | null; minutes: number | null },
+): boolean {
+  if (from.date && today < from.date) return false;
+  if (until.date && today > until.date) return false;
+  if (nowMinutes === null) return true;
+
+  const onFromDay = !from.date || today === from.date;
+  if (from.minutes !== null && onFromDay && nowMinutes < from.minutes) {
+    return false;
+  }
+  const onUntilDay = !until.date || today === until.date;
+  // Exclusive: an end hour of 11:30 means it's gone by 11:30, not at 11:31.
+  if (until.minutes !== null && onUntilDay && nowMinutes >= until.minutes) {
+    return false;
+  }
+  return true;
+}
+
 /** A tick-off cell: anything but empty or an explicit "no" counts as done. */
 export function isTicked(raw: string): boolean {
   const value = raw.trim();

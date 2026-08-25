@@ -5,11 +5,12 @@ import {
   normalizeDate,
   normalizeText,
   parseClock,
+  withinWindow,
 } from "./sheets";
 import type { SpecialOccasion, SpecialOccasionEntry } from "./types";
 
 const SHEET_RANGE =
-  process.env.SPECIAL_OCCASIONS_RANGE ?? "Speciale Gelegenheden!A1:K400";
+  process.env.SPECIAL_OCCASIONS_RANGE ?? "Speciale Gelegenheden!A1:M400";
 const TIMEZONE = process.env.TIMEZONE ?? "Europe/Brussels";
 const LOCALE = process.env.LOCALE ?? "nl-BE";
 
@@ -40,8 +41,36 @@ function formatEventDate(iso: string): string {
 const COLUMNS = {
   eventDate: ["datum", "date", "evenementdatum"],
   title: ["titel", "title"],
-  displayFrom: ["toonvanaf", "toonvan", "vanaf"],
-  displayTo: ["toontot", "totenmet", "toontotenmet"],
+  // Bare "Weergave" too: it's what a column headed "Weergave Startdatum"
+  // shortens to in practice, and left unmatched the start bound silently
+  // disappears rather than failing loudly.
+  displayFrom: [
+    "weergavestartdatum",
+    "weergavestart",
+    "weergave",
+    "toonvanaf",
+    "toonvan",
+    "vanaf",
+  ],
+  displayTo: ["weergaveeinddatum", "toontot", "totenmet", "toontotenmet"],
+  // Never a bare "Startuur"/"Einduur": `timeFrom`/`timeTo` below are the clock
+  // times of the programme rows themselves, and the two must not match each
+  // other's header. "Weergave Startuur" gates the board; "Tijd van" is 09:30
+  // 100m loop.
+  displayFromTime: [
+    "weergavestartuur",
+    "weergavestarttijd",
+    "toonvanaftijd",
+    "toonvantijd",
+    "toonvanafuur",
+  ],
+  displayToTime: [
+    "weergaveeinduur",
+    "weergaveeindtijd",
+    "toontottijd",
+    "toontotuur",
+    "toontijdtot",
+  ],
   bigSlide: ["bigslide", "grootscherm", "volledigscherm", "takeover"],
   timeFrom: ["tijdvan", "tijdvanaf", "begintijd", "start"],
   timeTo: ["tijdtot", "tijdtotenmet", "eindtijd", "einde"],
@@ -51,14 +80,37 @@ const COLUMNS = {
   location: ["locatie", "lokaal", "location", "room"],
 };
 
+type Bound = { date: string | null; minutes: number | null };
+
 type OccasionGroup = {
   eventDate: string;
   title: string;
   bigSlide: "periodic" | "permanent" | undefined;
+  /**
+   * The show-window, taken from the row that opened the group and never
+   * revised. An occasion is one board made of many programme rows, so it goes
+   * up and comes down as a whole: letting each row carry its own window meant a
+   * continuation row with a wider one could put the board up early, whatever
+   * the first row said.
+   */
+  from: Bound;
+  until: Bound;
   entries: SpecialOccasionEntry[];
 };
 
-export async function readSpecialOccasions(today: string): Promise<{
+/**
+ * The occasion boards active now, split by how they take the screen.
+ *
+ * `Weergave Startdatum`/`Einddatum` bound the days; the optional `Weergave
+ * Startuur`/`Einduur` sharpen their own boundary day into a moment, so a
+ * sports-day board can go up at 07:45 rather than at midnight. `nowMinutes` is
+ * null when another school day is being previewed, where those hours don't
+ * apply.
+ */
+export async function readSpecialOccasions(
+  today: string,
+  nowMinutes: number | null,
+): Promise<{
   regular: SpecialOccasion[];
   periodic: SpecialOccasion[];
   permanent: SpecialOccasion[];
@@ -93,6 +145,8 @@ export async function readSpecialOccasions(today: string): Promise<{
   let lastTitle: string | null = null;
   let lastDisplayFrom: string | null = null;
   let lastDisplayTo: string | null = null;
+  let lastDisplayFromMin: number | null = null;
+  let lastDisplayToMin: number | null = null;
   let lastBigSlide: "periodic" | "permanent" | undefined = undefined;
   let lastBigSlideExplicit = false;
 
@@ -103,6 +157,8 @@ export async function readSpecialOccasions(today: string): Promise<{
     const rawTitle = cell(columns.title);
     const rawFrom = cell(columns.displayFrom);
     const rawTo = cell(columns.displayTo);
+    const rawFromTime = cell(columns.displayFromTime);
+    const rawToTime = cell(columns.displayToTime);
     const rawBigSlide = cell(columns.bigSlide);
 
     const eventDate: string | null = normalizeDate(rawDate) ?? lastEventDate;
@@ -114,6 +170,10 @@ export async function readSpecialOccasions(today: string): Promise<{
       normalizeDate(rawFrom) ?? (sameGroup ? lastDisplayFrom : null);
     const displayTo: string | null =
       normalizeDate(rawTo) ?? (sameGroup ? lastDisplayTo : null);
+    const displayFromMin: number | null =
+      parseClock(rawFromTime) ?? (sameGroup ? lastDisplayFromMin : null);
+    const displayToMin: number | null =
+      parseClock(rawToTime) ?? (sameGroup ? lastDisplayToMin : null);
     const bigSlide: "periodic" | "permanent" | undefined = rawBigSlide
       ? parseBigSlide(rawBigSlide)
       : sameGroup && lastBigSlideExplicit
@@ -125,6 +185,8 @@ export async function readSpecialOccasions(today: string): Promise<{
     if (key) lastKey = key;
     lastDisplayFrom = displayFrom;
     lastDisplayTo = displayTo;
+    lastDisplayFromMin = displayFromMin;
+    lastDisplayToMin = displayToMin;
     if (rawBigSlide) {
       lastBigSlide = bigSlide;
       lastBigSlideExplicit = true;
@@ -134,10 +196,6 @@ export async function readSpecialOccasions(today: string): Promise<{
     }
 
     if (!key || !eventDate || !title) continue;
-
-    // Skip rows whose display window doesn't cover today.
-    if (displayFrom && today < displayFrom) continue;
-    if (displayTo && today > displayTo) continue;
 
     const rawTimeFrom = cell(columns.timeFrom);
     const rawTimeTo = cell(columns.timeTo);
@@ -163,7 +221,14 @@ export async function readSpecialOccasions(today: string): Promise<{
     };
 
     if (!groups.has(key)) {
-      groups.set(key, { eventDate, title, bigSlide, entries: [] });
+      groups.set(key, {
+        eventDate,
+        title,
+        bigSlide,
+        from: { date: displayFrom, minutes: displayFromMin },
+        until: { date: displayTo, minutes: displayToMin },
+        entries: [],
+      });
       order.push(key);
     }
     groups.get(key)!.entries.push(entry);
@@ -175,6 +240,8 @@ export async function readSpecialOccasions(today: string): Promise<{
 
   for (const key of order) {
     const g = groups.get(key)!;
+    // Decided once, for the whole occasion — see OccasionGroup.from.
+    if (!withinWindow(today, nowMinutes, g.from, g.until)) continue;
     const occ: SpecialOccasion = {
       eventDate: g.eventDate,
       eventDateLabel: formatEventDate(g.eventDate),
