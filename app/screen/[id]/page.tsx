@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { BoardShell } from "@/components/BoardShell";
+import { BuildStamp } from "@/components/BuildStamp";
 import { getBoardData } from "@/lib/board";
 import { styleOverridesCss } from "@/lib/style";
 import { ACCENTS, THEMES, type Accent } from "@/lib/theme";
@@ -42,6 +43,7 @@ export default async function ScreenPage({
     accentOverride: ACCENTS.includes(accentParam as Accent)
       ? (accentParam as Accent)
       : undefined,
+    buildStampOverride: one(query.build),
   });
 
   // Brand overrides from the Style tab, rendered server-side so there's no flash
@@ -58,6 +60,13 @@ export default async function ScreenPage({
         forceKeyPanel={query.keypanel === "1"}
         forceEvent={query.event === "1"}
       />
+      {/*
+       * Fixed-position, and a sibling of the board rather than part of it, so it
+       * sits over every layout the board can take — including a full-screen
+       * takeover, which is exactly when a screen looks stuck and you want to
+       * know what it's running.
+       */}
+      {data.buildStampVisible && <BuildStamp />}
     </>
   );
 }

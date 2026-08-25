@@ -54,6 +54,7 @@ hairline along the bottom edge shows where the screen is in that cycle. See
 | `?event=1` | the event poster (sample if none scheduled) |
 | `?takeover=1` | a Big Slide full-screen takeover (sample) |
 | `?occasion=1` | the special-occasion board (sample if none scheduled) |
+| `?build=1`, `?build=0` | force the corner build stamp on / off for this screen |
 
 ### Look & feel
 
@@ -353,6 +354,17 @@ the tab land on the next poll — no reload needed.
   restarts so nothing slides away mid-read. On a wall none of that shows —
   hover controls need a mouse, and the cursor hides itself after three still
   seconds. (On a touchscreen there's no hover, so the dots are the way to skip.)
+- **Self-updating screens, and a build stamp when you want one.** Every build is
+  stamped with its commit and build time — `a3f19c · 07-08 21:40` — and the
+  stamp rides along in `/api/board`, so each screen can tell that the host has
+  been rebuilt and it's still running the old bundle. When it is, it reloads
+  itself between full-screen items. Without that a kiosk keeps its first-loaded
+  JavaScript indefinitely — it polls for data, never for code — so a deploy
+  reached the host and stopped there. The stamp itself is only *shown* in
+  development, or when `BUILD_STAMP=on` while you're chasing a deploy: on a
+  normal day the corridor doesn't need a commit hash, and the screens keep
+  themselves current either way. Flipping it reaches the panels on their next
+  poll. See [deploy-lan.md](docs/deploy-lan.md#which-build-is-on-the-screen).
 - **Resilience.** Each successful poll is cached in `localStorage`. If the
   network drops, the last good board stays on screen and a "Geen verbinding"
   badge appears after 5 minutes. If the *server* can't reach the Sheet it
