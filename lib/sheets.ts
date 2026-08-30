@@ -239,10 +239,20 @@ async function flushQueue(): Promise<void> {
   try {
     const results = await fetchBatch(batch.map((b) => b.range));
     batch.forEach((b, i) => b.resolve(results[i]));
-  } catch {
-    // The batch failed as a whole (usually one absent tab). Fall back to
-    // isolated reads so a single missing tab can't blank every other zone —
-    // each range then succeeds or throws its own MissingTabError.
+  } catch (error) {
+    // A batch fails as a whole. When that's because one named tab doesn't
+    // exist, isolated reads separate the good ranges from the absent one, so a
+    // single missing tab can't blank every other zone.
+    //
+    // Any other failure — a 429, a 500, no route to Google — would fail nine
+    // more times over, and those retries are what turn a momentary rate-limit
+    // into a standing one: at one batch plus nine fallbacks per refresh, the
+    // retries alone hold the account at its read quota and nothing ever gets
+    // back under it. Fail the batch as a batch instead.
+    if (!(error instanceof MissingTabError)) {
+      batch.forEach((b) => b.reject(error));
+      return;
+    }
     await Promise.all(
       batch.map(async (b) => {
         try {
@@ -256,10 +266,11 @@ async function flushQueue(): Promise<void> {
 }
 
 /**
- * Read a range. Calls made in the same tick share one `values:batchGet`, so a
- * whole board load costs a single Sheets request rather than one per tab.
+ * Queue a range for the next flush. Calls made in the same tick share one
+ * `values:batchGet`, so a board load that misses the cache below costs a single
+ * Sheets request rather than one per tab.
  */
-export function fetchRange(range: string): Promise<string[][]> {
+function queueRead(range: string): Promise<string[][]> {
   return new Promise((resolve, reject) => {
     queue.push({ range, resolve, reject });
     if (!flushing) {
@@ -267,4 +278,122 @@ export function fetchRange(range: string): Promise<string[][]> {
       queueMicrotask(flushQueue);
     }
   });
+}
+
+/**
+ * How long a range's rows may be reused.
+ *
+ * Every open board polls `/api/board` every 30s, and each poll used to become
+ * its own Sheets read: three wall screens cost six reads a minute, and every
+ * colleague who opens the board on their PC adds two more. The read quota is 60
+ * a minute for the whole service account, so at roughly thirty simultaneous
+ * viewers the *wall* screens start failing too — the board would lose the
+ * people it exists for to the people merely looking at it.
+ *
+ * A TTL takes the audience out of that sum: reads settle at 60/TTL a minute no
+ * matter how many are watching. The price is freshness — a sheet edit reaches a
+ * screen up to TTL later than it used to, on top of that screen's own poll.
+ *
+ * Ten seconds buys most of that for very little: six reads a minute is a tenth
+ * of the quota, and the delay it adds stays well under the 30s poll each screen
+ * already waits out, so the cache never becomes the slow part of a staff edit
+ * reaching the wall.
+ */
+const TTL_MS = 10_000;
+
+/**
+ * How long a failing range may keep serving the last rows it read successfully.
+ *
+ * Most Sheets failures are seconds long — a rate-limit, a dropped connection,
+ * a blip at Google. Propagating those immediately puts "Rooster tijdelijk niet
+ * beschikbaar" on a wall in front of a corridor of students over something that
+ * has already fixed itself, and a board that cries wolf gets ignored on the day
+ * it's right. Inside this window the last good rows keep showing instead.
+ *
+ * Measured from the last *successful* read, not the last attempt, so repeated
+ * failures can't extend it: once the data is a minute old the board says so.
+ * The client has its own, longer guard — after five minutes without a poll it
+ * shows "Geen verbinding" (BoardShell's STALE_MS).
+ */
+const STALE_GRACE_MS = 60_000;
+
+/**
+ * How long to take "this tab doesn't exist" for an answer.
+ *
+ * An absent tab is a supported, stable state — the feature stays dormant until
+ * someone adds it — so re-asking every refresh is not diligence, it's waste,
+ * and expensive waste: Sheets rejects a *whole* batch when one range names a
+ * tab that isn't there, which sends the flush above down its per-range
+ * fallback. One dormant feature therefore costs ten requests per refresh
+ * instead of one, and at a screen's polling rate that alone is enough to hold
+ * a school at its read quota all day.
+ *
+ * Remembering the absence for a while keeps the range out of the batch, so the
+ * other tabs go back to costing one request between them. Long enough to stop
+ * paying for it; short enough that a tab added mid-morning starts showing up
+ * without anyone restarting the server.
+ */
+const MISSING_TAB_TTL_MS = 10 * 60_000;
+
+type Entry = {
+  rows: Promise<string[][]>;
+  storedAt: number;
+  /** The last rows this range read successfully, and when — see the grace above. */
+  lastGood?: { rows: string[][]; at: number };
+  /** Set once this range has been confirmed to name a tab that doesn't exist. */
+  missingTab?: boolean;
+};
+
+/**
+ * Rows are cached as the in-flight promise rather than the resolved rows, so
+ * readers arriving *during* a fetch wait on that request instead of starting
+ * their own. That single-flight behaviour is what holds under load: the
+ * microtask queue above only coalesces reads within one board load, and thirty
+ * viewers are thirty separate loads landing at thirty different moments.
+ *
+ * Timed from when the read starts rather than when it lands, so a slow response
+ * shortens the entry's life instead of extending its staleness.
+ */
+const cache = new Map<string, Entry>();
+
+/**
+ * Read a range, reusing a recent read of the same range when there is one.
+ *
+ * Failures are cached like successes: during an outage every poll would
+ * otherwise retry, and a stampede of retries against an API already refusing us
+ * is how a blip becomes an hour. The cost is that recovery from a transient
+ * error waits out the TTL as well.
+ */
+export function fetchRange(range: string): Promise<string[][]> {
+  const previous = cache.get(range);
+  if (previous) {
+    const ttl = previous.missingTab ? MISSING_TAB_TTL_MS : TTL_MS;
+    if (Date.now() - previous.storedAt < ttl) return previous.rows;
+  }
+
+  // Carried across the refresh so a failure can still fall back on it.
+  const lastGood = previous?.lastGood;
+
+  const entry: Entry = { rows: undefined!, storedAt: Date.now(), lastGood };
+  entry.rows = queueRead(range).then(
+    (rows) => {
+      entry.lastGood = { rows, at: Date.now() };
+      return rows;
+    },
+    (error: unknown) => {
+      if (lastGood && Date.now() - lastGood.at < STALE_GRACE_MS) {
+        return lastGood.rows;
+      }
+      // Only once the grace is spent, so a tab deleted mid-day isn't written
+      // off while the board is still legitimately showing its last rows.
+      if (error instanceof MissingTabError) entry.missingTab = true;
+      throw error;
+    },
+  );
+
+  cache.set(range, entry);
+  // Every caller receives this rejection through the copy it awaited; this
+  // handler exists only so Node doesn't also count the stored copy as unhandled.
+  entry.rows.catch(() => {});
+  return entry.rows;
 }
