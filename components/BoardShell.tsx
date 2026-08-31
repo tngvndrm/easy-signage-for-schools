@@ -454,7 +454,6 @@ export function BoardShell({
     <BoardControls
       turns={permanentCount}
       index={mod(permIndex, permanentCount)}
-      showing
       paused={paused}
       idle={idle}
       tone={tone}
@@ -465,26 +464,43 @@ export function BoardShell({
     />
   );
 
-  const controls = (tone: "accent" | "light" = "accent") =>
-    cycleTurns > 0 ? (
+  const controls = (tone: "accent" | "light" = "accent") => {
+    if (cycleTurns === 0) return null;
+    /*
+     * The ring is every screen this board shows, the dashboard included: dot
+     * one is the board itself, the rest are the interruptions of the lap the
+     * rotation is on. The dashboard has to be a station and not merely the gap
+     * between them — the substitutions are what most people came to read, and
+     * with the arrows walking burst to burst they were the one screen you
+     * could not ask for.
+     *
+     * The rotation's own pacing is untouched: it still drops back to the
+     * dashboard between bursts. This is about reaching it by hand.
+     */
+    const stations = cycleTurns + 1;
+    const lapBase = turn < 0 ? 0 : Math.floor(turn / cycleTurns) * cycleTurns;
+    const station = showing ? 1 + mod(turn, cycleTurns) : 0;
+    const go = (to: number) => {
+      const next = mod(to, stations);
+      if (next === 0) toBoard();
+      else jump(lapBase + next - 1);
+    };
+
+    return (
       <BoardControls
-        turns={cycleTurns}
-        // On the dashboard the arrows and the counter are talking about the
-        // interruption that's coming, not the one that just went.
-        index={mod(showing ? turn : turn + 1, cycleTurns)}
-        showing={showing !== null}
+        turns={stations}
+        index={station}
+        home
         paused={paused}
         idle={idle}
         tone={tone}
-        onPrev={() => jump(turn - 1)}
-        onNext={() => jump(turn + 1)}
-        // Stay in the lap the rotation is on, so a dot is the item it draws.
-        onJump={(i) =>
-          jump((turn < 0 ? 0 : Math.floor(turn / cycleTurns) * cycleTurns) + i)
-        }
+        onPrev={() => go(station - 1)}
+        onNext={() => go(station + 1)}
+        onJump={go}
         onTogglePause={togglePause}
       />
-    ) : null;
+    );
+  };
 
   // Between bursts, so a deploy never cuts a full-screen message in half. The
   // page's own state is the build it was compiled from plus the stamp setting
