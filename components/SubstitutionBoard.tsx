@@ -211,7 +211,7 @@ export function SubstitutionBoard({
                       <span className="font-display text-[1.75em] font-bold leading-none">
                         {row.klas}
                       </span>
-                      <span className="truncate text-[1.5em] font-light leading-none text-muted">
+                      <span className="truncate-tight text-[1.5em] font-light text-muted">
                         {row.absent}
                       </span>
                       <div className="flex min-w-0 items-baseline gap-[0.6em]">
@@ -230,12 +230,12 @@ export function SubstitutionBoard({
                               {row.content}
                             </span>
                           ) : (
-                            <span className="truncate text-[0.95em] font-light leading-none text-muted">
+                            <span className="truncate-tight text-[0.95em] font-light text-muted">
                               {row.content}
                             </span>
                           ))}
                       </div>
-                      <span className="truncate text-right font-display text-[1.65em] font-bold leading-none text-accent">
+                      <span className="truncate-tight text-right font-display text-[1.65em] font-bold text-accent">
                         {row.lokaal || "—"}
                       </span>
                     </div>
