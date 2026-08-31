@@ -264,8 +264,10 @@ so nobody has to guess whether it's worth waiting:
 - **During a burst** it drains over `Full Screen Time`. A takeover hides the
   substitution board, which is what most people walked over to read, and
   otherwise there's no telling a five-second interruption from a stuck screen.
-  `Permanent` slides and occasions get no bar — they hold all day, and a drain
-  would promise a return that never comes.
+  A lone `Permanent` slide or occasion gets no bar — it holds all day, and a
+  drain would promise a return that never comes. Several of them do get one:
+  once they take turns, the return is real and the question in the corridor is
+  the usual one — is another coming, and how long do I stand here?
 - **On the dashboard** it carries a dot per interruption and creeps across one
   full lap, so a student can see how many different screens there are and how
   far along they are. A lap is one turn per kind times the largest kind, not one
@@ -299,9 +301,13 @@ pointing at there.
 
 Held, the hairline freezes rather than running on empty, and a burst drops its
 draining bar — there's no time left to count down. A jump re-phases the lap, so
-the line still arrives at a dot exactly when the next interruption does. What a
-`Permanent` item holds is a lap of its own and stays out of reach here, for the
-same reason it gets no bar: it is meant to hold all day.
+the line still arrives at a dot exactly when the next interruption does.
+
+A day built out of nothing but `Permanent` items — several special occasions and
+no reason for anything else on screen — is a rotation like any other, so it gets
+the same transport over its own lap: a dot per item, arrows, and a hold. A single
+`Permanent` item gets neither that nor a drain, which is the whole point of it:
+nothing is coming, so there is nothing to pace or wait for.
 
 None of this reaches the wall. It renders only where there's a mouse to move —
 a Pi and a touch panel don't even have the buttons in the page, so nothing can

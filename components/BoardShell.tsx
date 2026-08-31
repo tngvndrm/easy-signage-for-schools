@@ -162,16 +162,26 @@ export function BoardShell({
       (occasion) => ({ kind: "occasion", occasion }) as const,
     ),
   ];
-  const permanentItem = permanentItems.length
-    ? permanentItems[permIndex % permanentItems.length]
+  const permanentCount = permanentItems.length;
+  const permanentItem = permanentCount
+    ? permanentItems[mod(permIndex, permanentCount)]
     : null;
+  /*
+   * One item just holds, and a day of exactly that is the common case — nothing
+   * is coming, so there is nothing to pace, count out or wait for. Everything
+   * below hangs off this: the drain, the transport and the timer all exist only
+   * once a second item makes the screen a rotation rather than a poster.
+   */
+  const permanentCycles = permanentCount > 1;
   const periodicSlides = data.periodicSlides;
 
+  // A timeout per item rather than one interval, so stepping by hand restarts
+  // the dwell instead of landing mid-way through somebody else's tick.
   useEffect(() => {
-    if (permanentItems.length < 2) return;
-    const timer = setInterval(() => setPermIndex((i) => i + 1), fullScreenMs);
-    return () => clearInterval(timer);
-  }, [permanentItems.length, fullScreenMs]);
+    if (!permanentCycles || paused) return;
+    const timer = setTimeout(() => setPermIndex((i) => i + 1), fullScreenMs);
+    return () => clearTimeout(timer);
+  }, [permanentCycles, paused, permIndex, fullScreenMs]);
 
   /*
    * One rotation drives every interruption. Two independent timers would
@@ -262,7 +272,11 @@ export function BoardShell({
    */
   const anchorFor = useCallback(
     (t: number, inMs = 0) =>
-      Date.now() + inMs - mod(t + 1, cycleTurns) * interruptEveryMs,
+      cycleTurns === 0
+        ? // A permanent-only day has no interruption lap to phase against, and
+          // the hold button still reaches this on its way past.
+          Date.now()
+        : Date.now() + inMs - mod(t + 1, cycleTurns) * interruptEveryMs,
     [cycleTurns, interruptEveryMs],
   );
 
@@ -309,13 +323,20 @@ export function BoardShell({
    * focused button, which keeps it.
    */
   useEffect(() => {
-    if (cycleTurns === 0) return;
+    if (cycleTurns === 0 && !permanentCycles) return;
     const onKey = (press: KeyboardEvent) => {
       const onButton =
         press.target instanceof HTMLElement && press.target.closest("button");
       if (press.key === " " && !onButton) {
         press.preventDefault();
         togglePause();
+        return;
+      }
+      if (permanentCycles) {
+        // A permanent day has no dashboard to come back to, so the arrows are
+        // free to step its lap and Esc has nothing to do.
+        if (press.key === "ArrowRight") setPermIndex((i) => i + 1);
+        if (press.key === "ArrowLeft") setPermIndex((i) => i - 1);
         return;
       }
       if (!showing) return;
@@ -325,7 +346,7 @@ export function BoardShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cycleTurns, jump, showing, toBoard, togglePause, turn]);
+  }, [cycleTurns, jump, permanentCycles, showing, toBoard, togglePause, turn]);
 
   /**
    * Which item of its kind turn `t` shows. Each turn takes one kind's next
@@ -416,10 +437,28 @@ export function BoardShell({
   /*
    * One cluster, dropped into whichever layout is on screen — a takeover is a
    * different <main>, and the controls have to reach the teacher there most of
-   * all. Not into the permanent branch: what holds there is a lap of its own,
-   * paced by nothing this rotation knows about, and it gets no progress bar
-   * for the same reason — a permanent item is meant to hold all day.
+   * all.
    */
+  /*
+   * The same cluster over the permanent lap. Its own handlers, because that lap
+   * is a plain ring of items with no dashboard between them: every item is on
+   * screen when its turn comes, so no dot is ever merely "next up".
+   */
+  const permanentControls = (tone: "accent" | "light" = "accent") => (
+    <BoardControls
+      turns={permanentCount}
+      index={mod(permIndex, permanentCount)}
+      showing
+      paused={paused}
+      idle={idle}
+      tone={tone}
+      onPrev={() => setPermIndex((i) => i - 1)}
+      onNext={() => setPermIndex((i) => i + 1)}
+      onJump={(i) => setPermIndex((p) => p - mod(p, permanentCount) + i)}
+      onTogglePause={togglePause}
+    />
+  );
+
   const controls = (tone: "accent" | "light" = "accent") =>
     cycleTurns > 0 ? (
       <BoardControls
@@ -455,16 +494,45 @@ export function BoardShell({
   // permanent occasion drops the header and message strip too: the day's
   // schedule is the point.
   if (permanentItem) {
+    const tone =
+      permanentItem.kind === "slide"
+        ? bigSlideTone(permanentItem.slide)
+        : "accent";
+    /*
+     * Only once several of them share the screen. A lone permanent item is
+     * going nowhere, so a drain would count down to a return that never comes
+     * and a transport would offer to step a lap of one — but a day built out
+     * of nothing but permanent occasions is a rotation like any other, and
+     * from a corridor it is the same question as always: is another one
+     * coming, and how long do I stand here?
+     *
+     * Keyed on the item so the drain starts afresh each turn rather than
+     * carrying on from wherever the last one left it.
+     */
+    const pacing = permanentCycles && (
+      <>
+        {!paused && (
+          <BurstProgress
+            key={permIndex}
+            seconds={data.timing.fullScreenSec}
+            tone={tone}
+          />
+        )}
+        {permanentControls(tone)}
+      </>
+    );
+
     return permanentItem.kind === "slide" ? (
       <main
-        className="kiosk h-screen w-screen overflow-hidden bg-bg text-text"
+        className="kiosk relative h-screen w-screen overflow-hidden bg-bg text-text"
         {...root}
       >
         <BigSlide message={permanentItem.slide} />
+        {pacing}
       </main>
     ) : (
       <main
-        className="kiosk flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
+        className="kiosk relative flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
         {...root}
       >
         <SpecialOccasionBoard
@@ -473,6 +541,7 @@ export function BoardShell({
           comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
           fullscreen
         />
+        {pacing}
       </main>
     );
   }
