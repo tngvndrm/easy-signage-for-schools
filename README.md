@@ -39,9 +39,10 @@ disappears.
 
 Each screen's **pace** is staff-set too — how long a notice holds the message
 zone, how often a full-screen item interrupts, and how long it stays — and a
-hairline along the bottom edge shows where the screen is in that cycle. See
-[Per-screen settings](#per-screen-settings) and
-[One interruption at a time](#one-interruption-at-a-time).
+hairline along the bottom edge shows where the screen is in that cycle. Open the
+same URL on a laptop and you can step through that cycle or hold it, at your own
+pace instead of the corridor's. See [Per-screen settings](#per-screen-settings)
+and [One interruption at a time](#one-interruption-at-a-time).
 
 **Previews** (also linked from `/`), appended to a screen URL:
 
@@ -275,6 +276,39 @@ so nobody has to guess whether it's worth waiting:
 Both are CSS animations rather than per-frame timers, since three Pis run this
 all day.
 
+**From a desk you can drive it.** The corridor's pace isn't a teacher's: three
+minutes between interruptions means you either sit out a rotation that isn't for
+you, or never see the slide you opened the page to check. So the same URL on a
+laptop grows a small transport above the hairline — step through the full-screen
+items, or hold one:
+
+| | |
+| --- | --- |
+| ‹ › | the previous / next interruption, straight away |
+| dots | jump to one; the lit dot is what's on screen, half-lit when it's only what's next |
+| ⏸ | hold the board — a burst stays up, or the dashboard does. Resuming starts that item over rather than snatching it away half-read |
+
+Four controls, and every one names itself on hover. There's deliberately no
+"back to the dashboard" button: a burst hands the screen back inside `Full
+Screen Time` on its own, so it would only ever save a few seconds' wait — but
+**Esc** does it from the keyboard, which is worth having for the case the timer
+doesn't cover, a burst held on pause. Keys otherwise act on whatever is on
+screen: **space** holds and releases, and during a takeover **← / →** step it.
+On the dashboard the arrows stay with the message zone, which is what they're
+pointing at there.
+
+Held, the hairline freezes rather than running on empty, and a burst drops its
+draining bar — there's no time left to count down. A jump re-phases the lap, so
+the line still arrives at a dot exactly when the next interruption does. What a
+`Permanent` item holds is a lap of its own and stays out of reach here, for the
+same reason it gets no bar: it is meant to hold all day.
+
+None of this reaches the wall. It renders only where there's a mouse to move —
+a Pi and a touch panel don't even have the buttons in the page, so nothing can
+be tapped by accident — and it fades with the cursor after three still seconds.
+The board also won't [reload itself for a new build](#display-behaviour) while
+someone is holding it.
+
 ### Birthdays
 
 The whole-school birthday list lives in the sheet, imported once at the start of
@@ -370,6 +404,8 @@ the tab land on the next poll — no reload needed.
   restarts so nothing slides away mid-read. On a wall none of that shows —
   hover controls need a mouse, and the cursor hides itself after three still
   seconds. (On a touchscreen there's no hover, so the dots are the way to skip.)
+  The full-screen rotation has [its own transport](#one-interruption-at-a-time)
+  along the bottom edge, on the same terms.
 - **Self-updating screens, and a build stamp when you want one.** Every build is
   stamped with its commit and build time — `a3f19c · 07-08 21:40` — and the
   stamp rides along in `/api/board`, so each screen can tell that the host has

@@ -19,13 +19,16 @@ export function CycleTrack({
   turns,
   periodSec,
   anchor,
+  paused = false,
 }: {
   /** Interruptions in one full lap — one dot each, bar the last (see below). */
   turns: number;
   /** Seconds for a whole lap. */
   periodSec: number;
-  /** Epoch ms the rotation was last armed; the lap is phased against it. */
+  /** Epoch ms the lap starts from; the line is phased against it. */
   anchor: number;
+  /** Rotation held from the desk controls — freeze rather than run on empty. */
+  paused?: boolean;
 }) {
   /*
    * Phase the loop onto the rotation's own clock with a negative delay, so the
@@ -35,10 +38,13 @@ export function CycleTrack({
    * animation does the whole job — no per-frame timer on three Pis.
    */
   const style = useMemo(() => {
-    const offsetSec = (((Date.now() - anchor) % (periodSec * 1000)) / 1000).toFixed(2);
+    // Wrapped forward, because the anchor can sit in the future: stepping back
+    // to the dashboard phases the line onto the burst that is still to come.
+    const period = periodSec * 1000;
+    const offsetSec = ((((Date.now() - anchor) % period) + period) % period) / 1000;
     return {
       animationDuration: `${periodSec}s`,
-      animationDelay: `-${offsetSec}s`,
+      animationDelay: `-${offsetSec.toFixed(2)}s`,
     };
   }, [anchor, periodSec]);
 
@@ -56,7 +62,16 @@ export function CycleTrack({
       className="edge-hairline pointer-events-none absolute inset-x-0 bottom-0 bg-line/70"
     >
       <div
-        className="animate-creep h-full origin-left bg-accent/60"
+        /*
+         * Keyed on the anchor: the delay above is measured from the moment it
+         * was worked out, which only holds for an element starting its
+         * animation now. A re-phased lap therefore gets a fresh line rather
+         * than a new delay applied to one already halfway across.
+         */
+        key={anchor}
+        className={`animate-creep h-full origin-left bg-accent/60 ${
+          paused ? "[animation-play-state:paused]" : ""
+        }`}
         style={style}
       />
       {dots.map((at) => (
