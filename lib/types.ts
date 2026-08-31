@@ -70,7 +70,6 @@ export type SpecialOccasionEntry = {
   timeFromMinutes: number;
   timeToMinutes?: number;
   activity: string;
-  supervisor: string;
   info?: string;
   location?: string;
 };

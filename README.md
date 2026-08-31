@@ -420,9 +420,9 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
 | `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
-| `Speciale Gelegenheden` | `Datum · Titel · Toon vanaf · Toon tot · BigSlide · Tijd van · Tijd tot · Activiteit · Begeleider · Info · Locatie` |
+| `Speciale Gelegenheden` | `Datum · Titel · Toon vanaf · Toon tot · BigSlide · Tijd van · Tijd tot · Activiteit · Info · Locatie` |
 | `Style` | `Logo · School` + a `Color Name / Color Code` table |
-| `Speciale Gelegenheden` | `Datum · Titel · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · BigSlide · Tijd van · Tijd tot · Activiteit · Begeleider · Info · Locatie` |
+| `Speciale Gelegenheden` | `Datum · Titel · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · BigSlide · Tijd van · Tijd tot · Activiteit · Info · Locatie` |
 
 `Speciale Gelegenheden` carries two pairs of times, and they do different jobs.
 **Weergave Startuur / Einduur** decide when the board itself goes up and comes
