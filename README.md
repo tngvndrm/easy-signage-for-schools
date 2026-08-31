@@ -281,13 +281,13 @@ all day.
 **From a desk you can drive it.** The corridor's pace isn't a teacher's: three
 minutes between interruptions means you either sit out a rotation that isn't for
 you, or never see the slide you opened the page to check. So the same URL on a
-laptop grows a small transport above the hairline — step through the full-screen
-items, or hold one:
+laptop grows a small transport above the hairline — step through everything the
+screen shows, or hold one of them:
 
 | | |
 | --- | --- |
-| ‹ › | the previous / next interruption, straight away |
-| dots | jump to one; the lit dot is what's on screen, half-lit when it's only what's next |
+| ‹ › | one dot back or on, straight away. Past the last interruption they come back round to the dashboard, so the substitutions are always one step away rather than something to wait out |
+| dots | one per screen in the lap, **the dashboard first** — jump straight to any of them. The lit dot is what's up now |
 | ⏸ | hold the board — a burst stays up, or the dashboard does. Resuming starts that item over rather than snatching it away half-read |
 
 Four controls, and every one names itself on hover. There's deliberately no
@@ -299,13 +299,19 @@ screen: **space** holds and releases, and during a takeover **← / →** step i
 On the dashboard the arrows stay with the message zone, which is what they're
 pointing at there.
 
+The pill and the hairline count different things, deliberately: the hairline is
+a clock, marking when each interruption falls in the lap, while the pill is a
+list of screens — the dashboard included, since by hand it is a destination
+rather than the gap between two others.
+
 Held, the hairline freezes rather than running on empty, and a burst drops its
 draining bar — there's no time left to count down. A jump re-phases the lap, so
 the line still arrives at a dot exactly when the next interruption does.
 
 A day built out of nothing but `Permanent` items — several special occasions and
 no reason for anything else on screen — is a rotation like any other, so it gets
-the same transport over its own lap: a dot per item, arrows, and a hold. A single
+the same transport over its own lap — with no dashboard dot, because on such a
+day there is no dashboard to go back to: a dot per item, arrows, and a hold. A single
 `Permanent` item gets neither that nor a drain, which is the whole point of it:
 nothing is coming, so there is nothing to pace or wait for.
 

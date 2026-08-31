@@ -40,7 +40,7 @@ const PLAY = "M8 5l11 7-11 7z";
 export function BoardControls({
   turns,
   index,
-  showing,
+  home = false,
   paused,
   idle,
   tone = "accent",
@@ -49,12 +49,12 @@ export function BoardControls({
   onJump,
   onTogglePause,
 }: {
-  /** Interruptions in one lap — a dot each, same count the hairline draws. */
+  /** Screens in the ring — a dot each. */
   turns: number;
-  /** Which of them is on screen, or next up when the dashboard is showing. */
+  /** Which of them is on screen. */
   index: number;
-  /** Whether that item is up now, rather than still to come. */
-  showing: boolean;
+  /** Whether the ring opens on the dashboard, so dot one can say so. */
+  home?: boolean;
   paused: boolean;
   /** Pointer has been still for a moment — the cluster fades with the cursor. */
   idle: boolean;
@@ -114,15 +114,12 @@ export function BoardControls({
             key={i}
             type="button"
             onClick={() => onJump(i)}
-            aria-label={`Onderbreking ${i + 1}`}
-            title={`Onderbreking ${i + 1}`}
+            aria-label={home && i === 0 ? "Het bord" : `Onderbreking ${home ? i : i + 1}`}
+            title={home && i === 0 ? "Het bord" : `Onderbreking ${home ? i : i + 1}`}
             aria-current={i === index}
             className={`h-[0.35rem] rounded-full transition-all duration-500 ${
               i === index
-                ? // Half-lit while it is only next up: the dot says which item
-                  // the arrows and the counter are talking about, and that is
-                  // the coming one whenever the dashboard is what's on screen.
-                  `w-[1.7rem] ${light ? "bg-white" : "bg-accent"} ${showing ? "" : "opacity-50"}`
+                ? `w-[1.7rem] ${light ? "bg-white" : "bg-accent"}`
                 : `w-[0.35rem] ${light ? "bg-white/40" : "bg-line"}`
             }`}
           />
