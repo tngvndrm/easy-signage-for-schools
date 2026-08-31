@@ -15,7 +15,7 @@ import { SpecialOccasionBoard } from "./SpecialOccasionBoard";
 import { SubstitutionBoard } from "./SubstitutionBoard";
 import { useIdlePointer } from "./useIdlePointer";
 import { BUILD } from "@/lib/build";
-import type { BoardData } from "@/lib/types";
+import type { BoardData, BoardMessage, SpecialOccasion } from "@/lib/types";
 
 const POLL_MS = 30_000;
 
@@ -36,6 +36,11 @@ const CACHE_KEY = "infoborden:board";
 const RELOADED_KEY = "infoborden:reloaded-for";
 
 type Interrupt = "keys" | "event" | "bigslide" | "specialoccasion";
+
+/** One turn of the full-screen "Permanent" rotation — see `permanentItems`. */
+type PermanentItem =
+  | { kind: "slide"; slide: BoardMessage }
+  | { kind: "occasion"; occasion: SpecialOccasion };
 
 function readCache(): BoardData | null {
   try {
@@ -138,18 +143,29 @@ export function BoardShell({
     "data-idle": idle,
   } as const;
 
-  // Permanent Big Slides hold the whole screen; if several, they cycle.
-  const permanentSlides = data.permanentSlides;
-  const permanentSlide = permanentSlides.length
-    ? permanentSlides[permIndex % permanentSlides.length]
+  /*
+   * Everything marked "Permanent" — Big Slide messages and special occasions
+   * alike — holds the whole screen for its window. One of them simply stays up;
+   * several take turns at the full-screen pace, so marking a second one doesn't
+   * quietly bury it behind the first. Slides lead the lap, keeping the older
+   * "a Permanent Big Slide comes first" order.
+   */
+  const permanentItems: PermanentItem[] = [
+    ...data.permanentSlides.map((slide) => ({ kind: "slide", slide }) as const),
+    ...data.permanentSpecialOccasions.map(
+      (occasion) => ({ kind: "occasion", occasion }) as const,
+    ),
+  ];
+  const permanentItem = permanentItems.length
+    ? permanentItems[permIndex % permanentItems.length]
     : null;
   const periodicSlides = data.periodicSlides;
 
   useEffect(() => {
-    if (permanentSlides.length < 2) return;
+    if (permanentItems.length < 2) return;
     const timer = setInterval(() => setPermIndex((i) => i + 1), fullScreenMs);
     return () => clearInterval(timer);
-  }, [permanentSlides.length, fullScreenMs]);
+  }, [permanentItems.length, fullScreenMs]);
 
   /*
    * One rotation drives every interruption. Two independent timers would
@@ -226,11 +242,10 @@ export function BoardShell({
       : null;
 
   // Special occasions follow the same three-way logic as Big Slide messages.
-  // "Permanent" holds the whole screen for its window; "Yes" bursts full-screen
-  // on its turn in the rotation; "No" replaces the substitution board inline,
-  // keeping the header and message strip. ?occasion=1 previews the inline form,
-  // which is where the demo occasion lands.
-  const permanentOccasion = data.permanentSpecialOccasions[0] ?? null;
+  // "Permanent" holds the whole screen for its window (in the rotation above);
+  // "Yes" bursts full-screen on its turn in the rotation; "No" replaces the
+  // substitution board inline, keeping the header and message strip.
+  // ?occasion=1 previews the inline form, which is where the demo occasion lands.
   const periodicOccasion =
     data.periodicSpecialOccasions.length > 0 && showing === "specialoccasion"
       ? data.periodicSpecialOccasions[
@@ -305,29 +320,25 @@ export function BoardShell({
     showing === null,
   );
 
-  // A "Permanent" Big Slide holds the whole screen for its window — it outranks
-  // everything, since it was set for exactly these days on purpose.
-  if (permanentSlide) {
-    return (
+  // Anything "Permanent" holds the whole screen for its window — it outranks
+  // everything else, since it was set for exactly these days on purpose. A
+  // permanent occasion drops the header and message strip too: the day's
+  // schedule is the point.
+  if (permanentItem) {
+    return permanentItem.kind === "slide" ? (
       <main
         className="kiosk h-screen w-screen overflow-hidden bg-bg text-text"
         {...root}
       >
-        <BigSlide message={permanentSlide} />
+        <BigSlide message={permanentItem.slide} />
       </main>
-    );
-  }
-
-  // A "Permanent" special occasion owns the whole screen for its window — the
-  // day's schedule is the point, so the header and message strip step aside.
-  if (permanentOccasion) {
-    return (
+    ) : (
       <main
         className="kiosk flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
         {...root}
       >
         <SpecialOccasionBoard
-          occasion={permanentOccasion}
+          occasion={permanentItem.occasion}
           boardDate={data.date}
           comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
           fullscreen
