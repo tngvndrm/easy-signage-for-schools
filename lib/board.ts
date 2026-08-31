@@ -9,6 +9,7 @@ import {
   demoSubstitutions,
 } from "./demo-data";
 import { readBirthdays } from "./birthdays";
+import { blackoutAt } from "./blackout";
 import { BUILD, showBuildStamp } from "./build";
 import { readEvents } from "./events";
 import { readKeyDuties } from "./keys";
@@ -28,6 +29,7 @@ import { readSubstitutions } from "./substitutions";
 import { type Accent } from "./theme";
 import type {
   Birthday,
+  BlackoutWindow,
   BoardData,
   BoardMessage,
   BoardTiming,
@@ -213,15 +215,27 @@ export async function getBoardData(
 
   // Resolve this screen's appearance: query override > sheet setting > env.
   const set = (options.screenId && settings[options.screenId]) || EMPTY_SETTINGS;
+  const clockMin = minutesInSchoolTz(now);
   const accent = options.accentOverride ?? set.accent ?? ENV_ACCENT;
   let theme: "light" | "dark";
   if (options.themeOverride) {
     theme = options.themeOverride;
   } else if (set.darkStartMin !== null && set.lightStartMin !== null) {
-    theme = themeAt(minutesInSchoolTz(now), set.lightStartMin, set.darkStartMin);
+    theme = themeAt(clockMin, set.lightStartMin, set.darkStartMin);
   } else {
     theme = ENV_THEME;
   }
+
+  // Standby hours. Both ends are needed to describe a window, so one filled on
+  // its own leaves the screen awake rather than guessing at the other.
+  const blackout: BlackoutWindow | null =
+    set.blackoutStartMin !== null && set.blackoutEndMin !== null
+      ? {
+          startMin: set.blackoutStartMin,
+          endMin: set.blackoutEndMin,
+          active: blackoutAt(clockMin, set.blackoutStartMin, set.blackoutEndMin),
+        }
+      : null;
 
   // Demo only: `?keys=2` trims the list so both presentations can be reviewed
   // without waiting for the front desk to tick people off.
@@ -256,6 +270,7 @@ export async function getBoardData(
     dateLabel: label,
     appearance: { theme, accent },
     screenName: set.name,
+    blackout,
     timing: {
       messageCycleSec: set.messageCycleSec ?? DEFAULT_TIMING.messageCycleSec,
       fullScreenIntervalSec:

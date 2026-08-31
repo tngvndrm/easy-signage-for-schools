@@ -1,0 +1,36 @@
+# Runs the two checks that catch what would otherwise reach a hallway screen
+# as a blank board: the types, and a real production build. Both are the same
+# commands the LAN host runs at deploy time (docs/install.md), so a green run
+# here means the deploy's build will not be the thing that fails.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push supersedes the run still going for the same branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` and not `npm install`: it installs exactly the lockfile, the
+      # same way the deploy does, so CI cannot pass on a dependency tree the
+      # LAN host will never see.
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run build

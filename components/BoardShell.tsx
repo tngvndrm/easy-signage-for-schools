@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BigSlide, bigSlideTone } from "./BigSlide";
 import { BirthdayZone } from "./BirthdayZone";
+import { Blackout } from "./Blackout";
 import { BoardControls } from "./BoardControls";
 import { BurstProgress } from "./BurstProgress";
 import { LogoMark } from "./LogoMark";
@@ -14,6 +15,7 @@ import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
 import { SpecialOccasionBoard } from "./SpecialOccasionBoard";
 import { SubstitutionBoard } from "./SubstitutionBoard";
+import { useBlackout } from "./useBlackout";
 import { useIdlePointer } from "./useIdlePointer";
 import { BUILD } from "@/lib/build";
 import type { BoardData, BoardMessage, SpecialOccasion } from "@/lib/types";
@@ -123,6 +125,7 @@ export function BoardShell({
   );
   const lastOkRef = useRef<number>(Date.now());
   const idle = useIdlePointer();
+  const blackedOut = useBlackout(data.blackout);
   const [showing, setShowing] = useState<Interrupt | null>(null);
   // Bursts begun since the rotation was armed; -1 before the first one. Which
   // item a kind is up to is derived from it below rather than counted per kind,
@@ -324,6 +327,9 @@ export function BoardShell({
    */
   useEffect(() => {
     if (cycleTurns === 0 && !permanentCycles) return;
+    // Nothing on screen to act on during standby, and a Space pressed at a
+    // black screen would otherwise leave the board paused for the morning.
+    if (blackedOut) return;
     const onKey = (press: KeyboardEvent) => {
       const onButton =
         press.target instanceof HTMLElement && press.target.closest("button");
@@ -346,7 +352,7 @@ export function BoardShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cycleTurns, jump, permanentCycles, showing, toBoard, togglePause, turn]);
+  }, [blackedOut, cycleTurns, jump, permanentCycles, showing, toBoard, togglePause, turn]);
 
   /**
    * Which item of its kind turn `t` shows. Each turn takes one kind's next
@@ -502,13 +508,34 @@ export function BoardShell({
   useBuildReload(
     serverState,
     stateKey(BUILD, initial.buildStampVisible),
-    showing === null && !paused,
+    blackedOut || (showing === null && !paused),
   );
 
   // Anything "Permanent" holds the whole screen for its window — it outranks
   // everything else, since it was set for exactly these days on purpose. A
   // permanent occasion drops the header and message strip too: the day's
   // schedule is the point.
+  /*
+   * Standby outranks every other layout, a permanent takeover included. The
+   * whole point is a dark hall after hours, and a message nobody is there to
+   * read is not a reason to light one. Returning here rather than laying black
+   * over the board also unmounts the zones, so the rotations aren't quietly
+   * cycling to an empty corridor all night — and the morning starts on the
+   * first message rather than wherever the night left off.
+   *
+   * Moving a pointer lifts it (see `useBlackout`), so the teacher who opens
+   * this URL from home in the evening gets the board, not the black.
+   */
+  if (blackedOut) {
+    return (
+      <Blackout
+        wakesAtMin={data.blackout?.endMin ?? null}
+        screenName={data.screenName}
+        screenId={screenId}
+      />
+    );
+  }
+
   if (permanentItem) {
     const tone =
       permanentItem.kind === "slide"

@@ -15,10 +15,17 @@ const demoTiming = {
   fullScreenSec: null,
 };
 
+/*
+ * No standby hours in demo mode, deliberately. Demo data exists so a layout can
+ * be reviewed on any laptop at any hour, and a black screen at 20:00 reads as a
+ * broken build rather than a working feature. `?blackout=1` shows it instead.
+ */
+const noBlackout = { blackoutStartMin: null, blackoutEndMin: null };
+
 export const demoSettings: Record<string, ScreenSettings> = {
-  "1": { name: "Inkomhal", accent: "coral", darkStartMin: 18 * 60, lightStartMin: 8 * 60 + 30, ...demoTiming },
-  "2": { name: "Blok B", accent: "gold", darkStartMin: null, lightStartMin: null, ...demoTiming },
-  "3": { name: "Leraarskamer", accent: "blue", darkStartMin: null, lightStartMin: null, ...demoTiming },
+  "1": { name: "Inkomhal", accent: "coral", darkStartMin: 18 * 60, lightStartMin: 8 * 60 + 30, ...noBlackout, ...demoTiming },
+  "2": { name: "Blok B", accent: "gold", darkStartMin: null, lightStartMin: null, ...noBlackout, ...demoTiming },
+  "3": { name: "Leraarskamer", accent: "blue", darkStartMin: null, lightStartMin: null, ...noBlackout, ...demoTiming },
 };
 
 /**

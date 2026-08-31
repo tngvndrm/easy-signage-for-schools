@@ -6,8 +6,8 @@ const SETTINGS_RANGE = process.env.SETTINGS_SHEET_RANGE ?? "Settings!A1:L30";
 /**
  * Per-screen settings staff can change live from the sheet, no redeploy: a
  * friendly name, an accent colour, the times the board flips between the light
- * and dark theme, and how fast the board paces itself. (Turn Off / Turn On are
- * reserved for the TV-power feature and not read by anything yet.)
+ * and dark theme, the hours it goes dark altogether, and how fast it paces
+ * itself.
  */
 export type ScreenSettings = {
   name: string | null;
@@ -16,6 +16,10 @@ export type ScreenSettings = {
   darkStartMin: number | null;
   /** Minutes-of-day the light theme starts; null when unscheduled. */
   lightStartMin: number | null;
+  /** Minutes-of-day the screen blacks out (`Turn Off`); null when unscheduled. */
+  blackoutStartMin: number | null;
+  /** Minutes-of-day the board comes back (`Turn On`); null when unscheduled. */
+  blackoutEndMin: number | null;
   /** Seconds each message holds the rotation; null falls back to the default. */
   messageCycleSec: number | null;
   /** Seconds between full-screen bursts; null falls back to the default. */
@@ -29,6 +33,8 @@ export const EMPTY_SETTINGS: ScreenSettings = {
   accent: null,
   darkStartMin: null,
   lightStartMin: null,
+  blackoutStartMin: null,
+  blackoutEndMin: null,
   messageCycleSec: null,
   fullScreenIntervalSec: null,
   fullScreenSec: null,
@@ -40,6 +46,8 @@ const COLUMNS = {
   accent: ["colorscheme", "kleur", "accent", "kleurenschema", "color"],
   darkStart: ["darkthemestart", "donkerthemastart", "darkstart", "donker"],
   lightStart: ["lightthemestart", "lichtthemastart", "lightstart", "licht"],
+  turnOff: ["turnoff", "uit", "schermuit", "uitschakelen", "blackout", "blackoutstart"],
+  turnOn: ["turnon", "aan", "schermaan", "inschakelen", "blackouteinde", "blackoutend"],
   messageCycle: ["messagecycletime", "messagecycle", "berichttijd", "mededelingstijd"],
   fullScreenInterval: ["fullscreeninterval", "volledigscherminterval", "scherminterval"],
   fullScreen: ["fullscreentime", "fullscreen", "volledigschermtijd", "schermtijd"],
@@ -113,6 +121,8 @@ export async function readSettings(): Promise<Record<string, ScreenSettings>> {
       accent: parseAccent(cell(columns.accent)),
       darkStartMin: parseHm(cell(columns.darkStart)),
       lightStartMin: parseHm(cell(columns.lightStart)),
+      blackoutStartMin: parseHm(cell(columns.turnOff)),
+      blackoutEndMin: parseHm(cell(columns.turnOn)),
       messageCycleSec: parseSeconds(cell(columns.messageCycle)),
       fullScreenIntervalSec: parseSeconds(cell(columns.fullScreenInterval)),
       fullScreenSec: parseSeconds(cell(columns.fullScreen)),
