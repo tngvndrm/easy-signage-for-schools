@@ -214,7 +214,8 @@ up and takes itself down instead of someone remembering to delete it.
     visible between bursts, like an event poster.
   - `Permanent` — held full-screen for the whole weergave window, hiding the
     dashboard. For "welcome back" / holiday messages where nothing else matters.
-    Several at once rotate.
+    Several at once take turns on that screen — together with any `Permanent`
+    special occasion, which holds the screen the same way.
   (Reads `Yes`/`Ja` and `Permanent`/`Vast` loosely; a data-validation dropdown
   keeps it tidy.)
 
@@ -251,9 +252,11 @@ The key panel, the event poster and periodic (`Yes`) Big Slides share a single
 rotation rather than running their own timers — independent timers would
 eventually fire together and fight over the screen. Every `Full Screen Interval`
 (3 minutes by default) the board shows the next one due for `Full Screen Time`,
-then returns to the dashboard. A `Permanent` Big Slide outranks all of them: it
-holds the whole screen for its window, since it was set for exactly those days
-on purpose.
+then returns to the dashboard. Anything marked `Permanent` — a Big Slide message
+or a special occasion — outranks all of them: it holds the whole screen for its
+window, since it was set for exactly those days on purpose. One of them simply
+stays up; several share that screen, swapping every `Full Screen Time`, so
+marking a second one doesn't quietly bury it behind the first.
 
 A hairline along the bottom edge of the screen says where in that cycle you are,
 so nobody has to guess whether it's worth waiting:
@@ -296,7 +299,9 @@ pointing at there.
 
 Held, the hairline freezes rather than running on empty, and a burst drops its
 draining bar — there's no time left to count down. A jump re-phases the lap, so
-the line still arrives at a dot exactly when the next interruption does.
+the line still arrives at a dot exactly when the next interruption does. What a
+`Permanent` item holds is a lap of its own and stays out of reach here, for the
+same reason it gets no bar: it is meant to hold all day.
 
 None of this reaches the wall. It renders only where there's a mouse to move —
 a Pi and a touch panel don't even have the buttons in the page, so nothing can
@@ -454,9 +459,9 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
 | `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
-| `Speciale Gelegenheden` | `Datum · Titel · Toon vanaf · Toon tot · BigSlide · Tijd van · Tijd tot · Activiteit · Begeleider · Info · Locatie` |
+| `Speciale Gelegenheden` | `Datum · Titel · Toon vanaf · Toon tot · BigSlide · Tijd van · Tijd tot · Activiteit · Info · Locatie` |
 | `Style` | `Logo · School` + a `Color Name / Color Code` table |
-| `Speciale Gelegenheden` | `Datum · Titel · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · BigSlide · Tijd van · Tijd tot · Activiteit · Begeleider · Info · Locatie` |
+| `Speciale Gelegenheden` | `Datum · Titel · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · BigSlide · Tijd van · Tijd tot · Activiteit · Info · Locatie` |
 
 `Speciale Gelegenheden` carries two pairs of times, and they do different jobs.
 **Weergave Startuur / Einduur** decide when the board itself goes up and comes
