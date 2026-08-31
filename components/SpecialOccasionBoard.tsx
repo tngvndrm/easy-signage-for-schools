@@ -221,16 +221,16 @@ export function SpecialOccasionBoard({
                   )}
                 </span>
                 <div className="flex min-w-0 items-baseline gap-[0.6em]">
-                  <span className="truncate font-display text-[1.75em] font-bold leading-none">
+                  <span className="truncate-tight font-display text-[1.75em] font-bold">
                     {entry.activity}
                   </span>
                   {entry.info && (
-                    <span className="min-w-0 max-w-[45%] truncate rounded-sm bg-accent/15 px-[0.6em] py-[0.26em] text-[1.15em] font-normal leading-none text-accent">
+                    <span className="min-w-0 max-w-[45%] truncate-tight rounded-sm bg-accent/15 px-[0.6em] py-[0.26em] text-[1.15em] font-normal text-accent">
                       {entry.info}
                     </span>
                   )}
                 </div>
-                <span className="truncate text-right font-display text-[1.65em] font-bold leading-none text-accent">
+                <span className="truncate-tight text-right font-display text-[1.65em] font-bold text-accent">
                   {entry.location || "—"}
                 </span>
               </div>
