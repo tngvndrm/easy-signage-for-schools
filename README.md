@@ -213,7 +213,8 @@ up and takes itself down instead of someone remembering to delete it.
     visible between bursts, like an event poster.
   - `Permanent` — held full-screen for the whole weergave window, hiding the
     dashboard. For "welcome back" / holiday messages where nothing else matters.
-    Several at once rotate.
+    Several at once take turns on that screen — together with any `Permanent`
+    special occasion, which holds the screen the same way.
   (Reads `Yes`/`Ja` and `Permanent`/`Vast` loosely; a data-validation dropdown
   keeps it tidy.)
 
@@ -250,9 +251,11 @@ The key panel, the event poster and periodic (`Yes`) Big Slides share a single
 rotation rather than running their own timers — independent timers would
 eventually fire together and fight over the screen. Every `Full Screen Interval`
 (3 minutes by default) the board shows the next one due for `Full Screen Time`,
-then returns to the dashboard. A `Permanent` Big Slide outranks all of them: it
-holds the whole screen for its window, since it was set for exactly those days
-on purpose.
+then returns to the dashboard. Anything marked `Permanent` — a Big Slide message
+or a special occasion — outranks all of them: it holds the whole screen for its
+window, since it was set for exactly those days on purpose. One of them simply
+stays up; several share that screen, swapping every `Full Screen Time`, so
+marking a second one doesn't quietly bury it behind the first.
 
 A hairline along the bottom edge of the screen says where in that cycle you are,
 so nobody has to guess whether it's worth waiting:
