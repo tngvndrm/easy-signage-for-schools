@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BigSlide, bigSlideTone } from "./BigSlide";
 import { BirthdayZone } from "./BirthdayZone";
 import { Blackout } from "./Blackout";
+import { BoardControls } from "./BoardControls";
 import { BurstProgress } from "./BurstProgress";
 import { LogoMark } from "./LogoMark";
 import { Clock } from "./Clock";
@@ -17,7 +18,7 @@ import { SubstitutionBoard } from "./SubstitutionBoard";
 import { useBlackout } from "./useBlackout";
 import { useIdlePointer } from "./useIdlePointer";
 import { BUILD } from "@/lib/build";
-import type { BoardData } from "@/lib/types";
+import type { BoardData, BoardMessage, SpecialOccasion } from "@/lib/types";
 
 const POLL_MS = 30_000;
 
@@ -38,6 +39,14 @@ const CACHE_KEY = "infoborden:board";
 const RELOADED_KEY = "infoborden:reloaded-for";
 
 type Interrupt = "keys" | "event" | "bigslide" | "specialoccasion";
+
+/** One turn of the full-screen "Permanent" rotation — see `permanentItems`. */
+type PermanentItem =
+  | { kind: "slide"; slide: BoardMessage }
+  | { kind: "occasion"; occasion: SpecialOccasion };
+
+/** Modulo that wraps negatives forward — the rotation can be stepped back. */
+const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 function readCache(): BoardData | null {
   try {
@@ -116,15 +125,16 @@ export function BoardShell({
   );
   const lastOkRef = useRef<number>(Date.now());
   const idle = useIdlePointer();
+  const blackedOut = useBlackout(data.blackout);
   const [showing, setShowing] = useState<Interrupt | null>(null);
+  // Bursts begun since the rotation was armed; -1 before the first one. Which
+  // item a kind is up to is derived from it below rather than counted per kind,
+  // which is what lets the controls step backwards: turn - 1 is the item that
+  // just played, every time.
+  const [turn, setTurn] = useState(-1);
+  const [paused, setPaused] = useState(false);
   const [cycleAnchor, setCycleAnchor] = useState<number | null>(null);
   const [permIndex, setPermIndex] = useState(0);
-  // Start at -1: each burst pre-increments, so the first burst shows item 0
-  // rather than skipping straight to item 1.
-  const [periodicIndex, setPeriodicIndex] = useState(-1);
-  const [periodicOccasionIndex, setPeriodicOccasionIndex] = useState(-1);
-
-  const blackedOut = useBlackout(data.blackout);
 
   const manyKeys = data.keys.length > KEY_PANEL_THRESHOLD;
   const event = data.events[0] ?? null;
@@ -142,18 +152,39 @@ export function BoardShell({
     "data-idle": idle,
   } as const;
 
-  // Permanent Big Slides hold the whole screen; if several, they cycle.
-  const permanentSlides = data.permanentSlides;
-  const permanentSlide = permanentSlides.length
-    ? permanentSlides[permIndex % permanentSlides.length]
+  /*
+   * Everything marked "Permanent" — Big Slide messages and special occasions
+   * alike — holds the whole screen for its window. One of them simply stays up;
+   * several take turns at the full-screen pace, so marking a second one doesn't
+   * quietly bury it behind the first. Slides lead the lap, keeping the older
+   * "a Permanent Big Slide comes first" order.
+   */
+  const permanentItems: PermanentItem[] = [
+    ...data.permanentSlides.map((slide) => ({ kind: "slide", slide }) as const),
+    ...data.permanentSpecialOccasions.map(
+      (occasion) => ({ kind: "occasion", occasion }) as const,
+    ),
+  ];
+  const permanentCount = permanentItems.length;
+  const permanentItem = permanentCount
+    ? permanentItems[mod(permIndex, permanentCount)]
     : null;
+  /*
+   * One item just holds, and a day of exactly that is the common case — nothing
+   * is coming, so there is nothing to pace, count out or wait for. Everything
+   * below hangs off this: the drain, the transport and the timer all exist only
+   * once a second item makes the screen a rotation rather than a poster.
+   */
+  const permanentCycles = permanentCount > 1;
   const periodicSlides = data.periodicSlides;
 
+  // A timeout per item rather than one interval, so stepping by hand restarts
+  // the dwell instead of landing mid-way through somebody else's tick.
   useEffect(() => {
-    if (permanentSlides.length < 2) return;
-    const timer = setInterval(() => setPermIndex((i) => i + 1), fullScreenMs);
-    return () => clearInterval(timer);
-  }, [permanentSlides.length, fullScreenMs]);
+    if (!permanentCycles || paused) return;
+    const timer = setTimeout(() => setPermIndex((i) => i + 1), fullScreenMs);
+    return () => clearTimeout(timer);
+  }, [permanentCycles, paused, permIndex, fullScreenMs]);
 
   /*
    * One rotation drives every interruption. Two independent timers would
@@ -189,36 +220,146 @@ export function BoardShell({
     ? queue.length * Math.max(...queue.map((kind) => kindCounts[kind]))
     : 0;
 
+  /*
+   * The shape of one turn: a burst, then whatever is left of the interval back
+   * on the dashboard. With Full Screen Time ≥ the interval there is no
+   * dashboard time in a turn at all and the bursts run back to back — the
+   * burst is capped rather than allowed to run into the next one.
+   */
+  const burstMs = Math.min(fullScreenMs, interruptEveryMs);
+  const restMs = Math.max(0, interruptEveryMs - burstMs);
+
+  // Re-arm when a kind appears or vanishes, or staff retune the pace. Any burst
+  // still up goes with it: its timer died with the old effect, and without this
+  // it would hold the screen until the next tick. The lap the bottom hairline
+  // draws starts here too — with the dashboard, one interval before turn 0.
   useEffect(() => {
-    const due = queueKey ? (queueKey.split(",") as Interrupt[]) : [];
-    // Re-arming (a kind appeared or vanished, or the pace changed) also clears
-    // any burst still up: its hide timer dies with the old effect, and without
-    // this the burst would hold the screen until the next interval tick.
     setShowing(null);
-    if (due.length === 0) {
-      setCycleAnchor(null);
+    setTurn(-1);
+    setCycleAnchor(queueKey ? Date.now() : null);
+  }, [queueKey, fullScreenMs, interruptEveryMs]);
+
+  /*
+   * One timer walks the whole rotation, alternating burst and dashboard.
+   *
+   * Primitive deps only — `queue` is rebuilt every render and the 30-second
+   * poll re-renders even when nothing changed, so depending on its identity
+   * would restart the phase on every poll and freeze the rotation.
+   */
+  useEffect(() => {
+    if (!queueKey || paused) return;
+    const due = queueKey.split(",") as Interrupt[];
+    // The screen opens on the dashboard and waits a whole interval for its
+    // first interruption; later dashboard spells are the rest of a turn.
+    const delay = showing ? burstMs : turn < 0 ? interruptEveryMs : restMs;
+    const timer = setTimeout(() => {
+      // With no dashboard time left in the turn, one burst hands straight to
+      // the next rather than blinking the board up for a frame between them.
+      if (showing && restMs > 0) {
+        setShowing(null);
+        return;
+      }
+      const next = turn + 1;
+      setTurn(next);
+      setShowing(due[mod(next, due.length)]);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [queueKey, paused, showing, turn, burstMs, restMs, interruptEveryMs]);
+
+  /*
+   * Where the hairline's lap has to start for its line to reach turn `t`'s dot
+   * exactly as that turn's burst begins, `inMs` from now. Every manual jump
+   * re-phases it through here, so a skipped-to burst still lands on a dot and
+   * the line keeps meaning what it means on the wall. Turn `t` sits `t`
+   * intervals into the lap, plus the one the lap opens with on the dashboard.
+   */
+  const anchorFor = useCallback(
+    (t: number, inMs = 0) =>
+      cycleTurns === 0
+        ? // A permanent-only day has no interruption lap to phase against, and
+          // the hold button still reaches this on its way past.
+          Date.now()
+        : Date.now() + inMs - mod(t + 1, cycleTurns) * interruptEveryMs,
+    [cycleTurns, interruptEveryMs],
+  );
+
+  /** Put turn `t` on screen now, wherever the rotation had got to. */
+  const jump = useCallback(
+    (t: number) => {
+      const due = queueKey ? (queueKey.split(",") as Interrupt[]) : [];
+      if (due.length === 0) return;
+      setTurn(t);
+      setShowing(due[mod(t, due.length)]);
+      setCycleAnchor(anchorFor(t));
+    },
+    [anchorFor, queueKey],
+  );
+
+  /**
+   * Back to the dashboard, with the rest of this turn to read it in. No button
+   * of its own: prev/next and the hold cover what a desk viewer actually wants,
+   * and a burst hands the screen back inside Full Screen Time regardless. It
+   * earns a key for the one case that timer can't cover — a burst held on
+   * pause, where resuming restarts it in full rather than letting it run out.
+   */
+  const toBoard = useCallback(() => {
+    setShowing(null);
+    setCycleAnchor(anchorFor(turn + 1, restMs));
+  }, [anchorFor, restMs, turn]);
+
+  const togglePause = useCallback(() => {
+    if (!paused) {
+      setPaused(true);
       return;
     }
-    // The lap the bottom hairline draws starts here, with this interval.
-    setCycleAnchor(Date.now());
-    let turn = 0;
-    let hide: ReturnType<typeof setTimeout>;
-    const cycle = setInterval(() => {
-      // With Full Screen Time ≥ the interval the previous burst's hide timer
-      // would fire into the new burst and cut it short — supersede it instead.
-      clearTimeout(hide);
-      const next = due[turn++ % due.length];
-      setShowing(next);
-      // Advance through the periodic slides so each burst shows the next one.
-      if (next === "bigslide") setPeriodicIndex((i) => i + 1);
-      if (next === "specialoccasion") setPeriodicOccasionIndex((i) => i + 1);
-      hide = setTimeout(() => setShowing(null), fullScreenMs);
-    }, interruptEveryMs);
-    return () => {
-      clearInterval(cycle);
-      clearTimeout(hide);
+    // Resuming restarts the phase that's on screen — a burst held halfway gets
+    // read from the top rather than snatched away — so the lap is re-phased
+    // onto it, and the hairline picks up where the rotation actually is.
+    setPaused(false);
+    setCycleAnchor(showing ? anchorFor(turn) : anchorFor(turn + 1, restMs));
+  }, [anchorFor, paused, restMs, showing, turn]);
+
+  /*
+   * Keys act on whatever is on screen: during a takeover the arrows step this
+   * rotation, and on the dashboard the message zone already owns them. Space
+   * holds the board either way — nothing else on the page uses it, bar a
+   * focused button, which keeps it.
+   */
+  useEffect(() => {
+    if (cycleTurns === 0 && !permanentCycles) return;
+    // Nothing on screen to act on during standby, and a Space pressed at a
+    // black screen would otherwise leave the board paused for the morning.
+    if (blackedOut) return;
+    const onKey = (press: KeyboardEvent) => {
+      const onButton =
+        press.target instanceof HTMLElement && press.target.closest("button");
+      if (press.key === " " && !onButton) {
+        press.preventDefault();
+        togglePause();
+        return;
+      }
+      if (permanentCycles) {
+        // A permanent day has no dashboard to come back to, so the arrows are
+        // free to step its lap and Esc has nothing to do.
+        if (press.key === "ArrowRight") setPermIndex((i) => i + 1);
+        if (press.key === "ArrowLeft") setPermIndex((i) => i - 1);
+        return;
+      }
+      if (!showing) return;
+      if (press.key === "ArrowRight") jump(turn + 1);
+      if (press.key === "ArrowLeft") jump(turn - 1);
+      if (press.key === "Escape") toBoard();
     };
-  }, [queueKey, fullScreenMs, interruptEveryMs]);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [blackedOut, cycleTurns, jump, permanentCycles, showing, toBoard, togglePause, turn]);
+
+  /**
+   * Which item of its kind turn `t` shows. Each turn takes one kind's next
+   * item, so a kind advances once per lap of the queue — and stepping the turn
+   * back steps the item back with it.
+   */
+  const itemAt = (t: number) => Math.floor(t / Math.max(1, queue.length));
 
   // Swaps into the substitution board's slot; everything else stays put.
   const showKeys =
@@ -226,19 +367,18 @@ export function BoardShell({
   const showEvent = (showing === "event" || forceEvent) && event !== null;
   const periodicSlide =
     showing === "bigslide" && periodicSlides.length > 0
-      ? periodicSlides[periodicIndex % periodicSlides.length]
+      ? periodicSlides[mod(itemAt(turn), periodicSlides.length)]
       : null;
 
   // Special occasions follow the same three-way logic as Big Slide messages.
-  // "Permanent" holds the whole screen for its window; "Yes" bursts full-screen
-  // on its turn in the rotation; "No" replaces the substitution board inline,
-  // keeping the header and message strip. ?occasion=1 previews the inline form,
-  // which is where the demo occasion lands.
-  const permanentOccasion = data.permanentSpecialOccasions[0] ?? null;
+  // "Permanent" holds the whole screen for its window (in the rotation above);
+  // "Yes" bursts full-screen on its turn in the rotation; "No" replaces the
+  // substitution board inline, keeping the header and message strip.
+  // ?occasion=1 previews the inline form, which is where the demo occasion lands.
   const periodicOccasion =
     data.periodicSpecialOccasions.length > 0 && showing === "specialoccasion"
       ? data.periodicSpecialOccasions[
-          periodicOccasionIndex % data.periodicSpecialOccasions.length
+          mod(itemAt(turn), data.periodicSpecialOccasions.length)
         ]
       : null;
   const inlineOccasion = data.specialOccasions[0] ?? null;
@@ -300,18 +440,65 @@ export function BoardShell({
     };
   }, [poll]);
 
+  /*
+   * One cluster, dropped into whichever layout is on screen — a takeover is a
+   * different <main>, and the controls have to reach the teacher there most of
+   * all.
+   */
+  /*
+   * The same cluster over the permanent lap. Its own handlers, because that lap
+   * is a plain ring of items with no dashboard between them: every item is on
+   * screen when its turn comes, so no dot is ever merely "next up".
+   */
+  const permanentControls = (tone: "accent" | "light" = "accent") => (
+    <BoardControls
+      turns={permanentCount}
+      index={mod(permIndex, permanentCount)}
+      showing
+      paused={paused}
+      idle={idle}
+      tone={tone}
+      onPrev={() => setPermIndex((i) => i - 1)}
+      onNext={() => setPermIndex((i) => i + 1)}
+      onJump={(i) => setPermIndex((p) => p - mod(p, permanentCount) + i)}
+      onTogglePause={togglePause}
+    />
+  );
+
+  const controls = (tone: "accent" | "light" = "accent") =>
+    cycleTurns > 0 ? (
+      <BoardControls
+        turns={cycleTurns}
+        // On the dashboard the arrows and the counter are talking about the
+        // interruption that's coming, not the one that just went.
+        index={mod(showing ? turn : turn + 1, cycleTurns)}
+        showing={showing !== null}
+        paused={paused}
+        idle={idle}
+        tone={tone}
+        onPrev={() => jump(turn - 1)}
+        onNext={() => jump(turn + 1)}
+        // Stay in the lap the rotation is on, so a dot is the item it draws.
+        onJump={(i) =>
+          jump((turn < 0 ? 0 : Math.floor(turn / cycleTurns) * cycleTurns) + i)
+        }
+        onTogglePause={togglePause}
+      />
+    ) : null;
+
   // Between bursts, so a deploy never cuts a full-screen message in half. The
   // page's own state is the build it was compiled from plus the stamp setting
   // it was rendered with — not the current payload, which the poll updates.
-  // Standby counts as quiet, and is in fact the best moment there is: nobody is
-  // in the building to see the reload, and the screen is awake on the new build
-  // by morning.
   useBuildReload(
     serverState,
     stateKey(BUILD, initial.buildStampVisible),
-    showing === null || blackedOut,
+    blackedOut || (showing === null && !paused),
   );
 
+  // Anything "Permanent" holds the whole screen for its window — it outranks
+  // everything else, since it was set for exactly these days on purpose. A
+  // permanent occasion drops the header and message strip too: the day's
+  // schedule is the point.
   /*
    * Standby outranks every other layout, a permanent takeover included. The
    * whole point is a dark hall after hours, and a message nobody is there to
@@ -319,6 +506,9 @@ export function BoardShell({
    * over the board also unmounts the zones, so the rotations aren't quietly
    * cycling to an empty corridor all night — and the morning starts on the
    * first message rather than wherever the night left off.
+   *
+   * Moving a pointer lifts it (see `useBlackout`), so the teacher who opens
+   * this URL from home in the evening gets the board, not the black.
    */
   if (blackedOut) {
     return (
@@ -330,33 +520,55 @@ export function BoardShell({
     );
   }
 
-  // A "Permanent" Big Slide holds the whole screen for its window — it outranks
-  // everything, since it was set for exactly these days on purpose.
-  if (permanentSlide) {
-    return (
+  if (permanentItem) {
+    const tone =
+      permanentItem.kind === "slide"
+        ? bigSlideTone(permanentItem.slide)
+        : "accent";
+    /*
+     * Only once several of them share the screen. A lone permanent item is
+     * going nowhere, so a drain would count down to a return that never comes
+     * and a transport would offer to step a lap of one — but a day built out
+     * of nothing but permanent occasions is a rotation like any other, and
+     * from a corridor it is the same question as always: is another one
+     * coming, and how long do I stand here?
+     *
+     * Keyed on the item so the drain starts afresh each turn rather than
+     * carrying on from wherever the last one left it.
+     */
+    const pacing = permanentCycles && (
+      <>
+        {!paused && (
+          <BurstProgress
+            key={permIndex}
+            seconds={data.timing.fullScreenSec}
+            tone={tone}
+          />
+        )}
+        {permanentControls(tone)}
+      </>
+    );
+
+    return permanentItem.kind === "slide" ? (
       <main
-        className="kiosk h-screen w-screen overflow-hidden bg-bg text-text"
+        className="kiosk relative h-screen w-screen overflow-hidden bg-bg text-text"
         {...root}
       >
-        <BigSlide message={permanentSlide} />
+        <BigSlide message={permanentItem.slide} />
+        {pacing}
       </main>
-    );
-  }
-
-  // A "Permanent" special occasion owns the whole screen for its window — the
-  // day's schedule is the point, so the header and message strip step aside.
-  if (permanentOccasion) {
-    return (
+    ) : (
       <main
-        className="kiosk flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
+        className="kiosk relative flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
         {...root}
       >
         <SpecialOccasionBoard
-          occasion={permanentOccasion}
+          occasion={permanentItem.occasion}
           boardDate={data.date}
           comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
           fullscreen
         />
+        {pacing}
       </main>
     );
   }
@@ -369,10 +581,15 @@ export function BoardShell({
         {...root}
       >
         <BigSlide message={periodicSlide} />
-        <BurstProgress
-          seconds={data.timing.fullScreenSec}
-          tone={bigSlideTone(periodicSlide)}
-        />
+        {/* A held burst has no time left to run: the bar would be counting
+            down to nothing, so the controls carry the paused state instead. */}
+        {!paused && (
+          <BurstProgress
+            seconds={burstMs / 1000}
+            tone={bigSlideTone(periodicSlide)}
+          />
+        )}
+        {controls(bigSlideTone(periodicSlide))}
       </main>
     );
   }
@@ -390,7 +607,8 @@ export function BoardShell({
           comfortableRows={FULLSCREEN_COMFORTABLE_ROWS}
           fullscreen
         />
-        <BurstProgress seconds={data.timing.fullScreenSec} />
+        {!paused && <BurstProgress seconds={burstMs / 1000} />}
+        {controls()}
       </main>
     );
   }
@@ -402,9 +620,14 @@ export function BoardShell({
         {...root}
       >
         <EventPoster event={event} />
-        {/* Not under `forceEvent`: the preview holds the poster indefinitely. */}
+        {/* Not under `forceEvent`: the preview holds the poster indefinitely,
+            so neither a draining bar nor a transport would be telling the
+            truth about what the rotation is doing. */}
         {showing === "event" && (
-          <BurstProgress seconds={data.timing.fullScreenSec} />
+          <>
+            {!paused && <BurstProgress seconds={burstMs / 1000} />}
+            {controls()}
+          </>
         )}
       </main>
     );
@@ -507,8 +730,10 @@ export function BoardShell({
           turns={cycleTurns}
           periodSec={cycleTurns * data.timing.fullScreenIntervalSec}
           anchor={cycleAnchor}
+          paused={paused}
         />
       )}
+      {controls()}
     </main>
   );
 }

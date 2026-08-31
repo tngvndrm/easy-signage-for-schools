@@ -39,9 +39,11 @@ disappears.
 
 Each screen's **pace** is staff-set too — how long a notice holds the message
 zone, how often a full-screen item interrupts, and how long it stays — and a
-hairline along the bottom edge shows where the screen is in that cycle. So are
-its **standby hours**, which black the board out overnight. See
-[Per-screen settings](#per-screen-settings),
+hairline along the bottom edge shows where the screen is in that cycle. Open the
+same URL on a laptop and you can step through that cycle or hold it, at your own
+pace instead of the corridor's. So are its **standby hours**, which black the
+board out overnight — on the wall, at least; move a pointer and the board stays
+up for you. See [Per-screen settings](#per-screen-settings),
 [Standby hours](#standby-hours) and
 [One interruption at a time](#one-interruption-at-a-time).
 
@@ -216,7 +218,8 @@ up and takes itself down instead of someone remembering to delete it.
     visible between bursts, like an event poster.
   - `Permanent` — held full-screen for the whole weergave window, hiding the
     dashboard. For "welcome back" / holiday messages where nothing else matters.
-    Several at once rotate.
+    Several at once take turns on that screen — together with any `Permanent`
+    special occasion, which holds the screen the same way.
   (Reads `Yes`/`Ja` and `Permanent`/`Vast` loosely; a data-validation dropdown
   keeps it tidy.)
 
@@ -253,9 +256,11 @@ The key panel, the event poster and periodic (`Yes`) Big Slides share a single
 rotation rather than running their own timers — independent timers would
 eventually fire together and fight over the screen. Every `Full Screen Interval`
 (3 minutes by default) the board shows the next one due for `Full Screen Time`,
-then returns to the dashboard. A `Permanent` Big Slide outranks all of them: it
-holds the whole screen for its window, since it was set for exactly those days
-on purpose.
+then returns to the dashboard. Anything marked `Permanent` — a Big Slide message
+or a special occasion — outranks all of them: it holds the whole screen for its
+window, since it was set for exactly those days on purpose. One of them simply
+stays up; several share that screen, swapping every `Full Screen Time`, so
+marking a second one doesn't quietly bury it behind the first.
 
 A hairline along the bottom edge of the screen says where in that cycle you are,
 so nobody has to guess whether it's worth waiting:
@@ -263,8 +268,10 @@ so nobody has to guess whether it's worth waiting:
 - **During a burst** it drains over `Full Screen Time`. A takeover hides the
   substitution board, which is what most people walked over to read, and
   otherwise there's no telling a five-second interruption from a stuck screen.
-  `Permanent` slides and occasions get no bar — they hold all day, and a drain
-  would promise a return that never comes.
+  A lone `Permanent` slide or occasion gets no bar — it holds all day, and a
+  drain would promise a return that never comes. Several of them do get one:
+  once they take turns, the return is real and the question in the corridor is
+  the usual one — is another coming, and how long do I stand here?
 - **On the dashboard** it carries a dot per interruption and creeps across one
   full lap, so a student can see how many different screens there are and how
   far along they are. A lap is one turn per kind times the largest kind, not one
@@ -274,6 +281,43 @@ so nobody has to guess whether it's worth waiting:
 
 Both are CSS animations rather than per-frame timers, since three Pis run this
 all day.
+
+**From a desk you can drive it.** The corridor's pace isn't a teacher's: three
+minutes between interruptions means you either sit out a rotation that isn't for
+you, or never see the slide you opened the page to check. So the same URL on a
+laptop grows a small transport above the hairline — step through the full-screen
+items, or hold one:
+
+| | |
+| --- | --- |
+| ‹ › | the previous / next interruption, straight away |
+| dots | jump to one; the lit dot is what's on screen, half-lit when it's only what's next |
+| ⏸ | hold the board — a burst stays up, or the dashboard does. Resuming starts that item over rather than snatching it away half-read |
+
+Four controls, and every one names itself on hover. There's deliberately no
+"back to the dashboard" button: a burst hands the screen back inside `Full
+Screen Time` on its own, so it would only ever save a few seconds' wait — but
+**Esc** does it from the keyboard, which is worth having for the case the timer
+doesn't cover, a burst held on pause. Keys otherwise act on whatever is on
+screen: **space** holds and releases, and during a takeover **← / →** step it.
+On the dashboard the arrows stay with the message zone, which is what they're
+pointing at there.
+
+Held, the hairline freezes rather than running on empty, and a burst drops its
+draining bar — there's no time left to count down. A jump re-phases the lap, so
+the line still arrives at a dot exactly when the next interruption does.
+
+A day built out of nothing but `Permanent` items — several special occasions and
+no reason for anything else on screen — is a rotation like any other, so it gets
+the same transport over its own lap: a dot per item, arrows, and a hold. A single
+`Permanent` item gets neither that nor a drain, which is the whole point of it:
+nothing is coming, so there is nothing to pace or wait for.
+
+None of this reaches the wall. It renders only where there's a mouse to move —
+a Pi and a touch panel don't even have the buttons in the page, so nothing can
+be tapped by accident — and it fades with the cursor after three still seconds.
+The board also won't [reload itself for a new build](#display-behaviour) while
+someone is holding it.
 
 ### Birthdays
 
@@ -356,7 +400,9 @@ the tab land on the next poll — no reload needed.
 
 `Turn Off` and `Turn On` black a screen out between those times: the board is
 replaced by a black screen carrying one dim line — the screen's name and when it
-comes back — and the dashboard returns on its own in the morning.
+comes back — and the dashboard returns on its own in the morning. This is aimed
+at the wall panels; anyone reading the board with a mouse in hand is left alone
+(see the pointer note below).
 
 This is a stand-in for genuinely powering the TV down over HDMI-CEC, which we
 can't do here: the Pis are powered from their TV's USB port, so cutting the TV's
@@ -377,9 +423,15 @@ supply is still in [`pi/tv-power/`](pi/tv-power), unwired.
   seconds. A screen that has lost the host still puts itself to bed at six and
   wakes at half eight on the window it last heard about.
 - Standby outranks everything, a permanent Big Slide included.
+- **Moving a pointer wakes it, and keeps it awake for five minutes.** Standby is
+  for the corridor; a teacher who opens the same URL from home at nine in the
+  evening gets the board. A wall panel in a cage has no mouse, so nothing ever
+  fires this and it sleeps on schedule.
 - `?blackout=1` shows the standby screen at any hour and `?blackout=0` holds the
-  board up during standby hours, so either can be checked from a desk. `?now=`
-  reaches it too: `?now=20:15` shows what the wall looks like that evening.
+  board up during standby hours, so either can be checked from a desk. Both
+  ignore the pointer, so the standby screen can actually be looked at. `?now=`
+  reaches the schedule too: `?now=20:15` shows that evening, pointer rules and
+  all.
 
 ### Display behaviour
 
@@ -399,6 +451,8 @@ supply is still in [`pi/tv-power/`](pi/tv-power), unwired.
   restarts so nothing slides away mid-read. On a wall none of that shows —
   hover controls need a mouse, and the cursor hides itself after three still
   seconds. (On a touchscreen there's no hover, so the dots are the way to skip.)
+  The full-screen rotation has [its own transport](#one-interruption-at-a-time)
+  along the bottom edge, on the same terms.
 - **Self-updating screens, and a build stamp when you want one.** Every build is
   stamped with its commit and build time — `a3f19c · 07-08 21:40` — and the
   stamp rides along in `/api/board`, so each screen can tell that the host has
@@ -452,9 +506,9 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
 | `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
-| `Speciale Gelegenheden` | `Datum · Titel · Toon vanaf · Toon tot · BigSlide · Tijd van · Tijd tot · Activiteit · Begeleider · Info · Locatie` |
+| `Speciale Gelegenheden` | `Datum · Titel · Toon vanaf · Toon tot · BigSlide · Tijd van · Tijd tot · Activiteit · Info · Locatie` |
 | `Style` | `Logo · School` + a `Color Name / Color Code` table |
-| `Speciale Gelegenheden` | `Datum · Titel · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · BigSlide · Tijd van · Tijd tot · Activiteit · Begeleider · Info · Locatie` |
+| `Speciale Gelegenheden` | `Datum · Titel · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · BigSlide · Tijd van · Tijd tot · Activiteit · Info · Locatie` |
 
 `Speciale Gelegenheden` carries two pairs of times, and they do different jobs.
 **Weergave Startuur / Einduur** decide when the board itself goes up and comes

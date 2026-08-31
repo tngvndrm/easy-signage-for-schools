@@ -20,8 +20,10 @@ function rowScale(rowCount: number, comfortable: number): number {
 }
 
 // Tijd column: show "HH:MM – HH:MM" or just "HH:MM"; a NowTime pill replaces
-// this for the currently-running entry.
-const COLUMNS = "minmax(9.5rem, 13rem) 1.6fr 1.3fr 1.2fr minmax(7rem, 11rem)";
+// this for the currently-running entry. Activiteit takes the whole middle —
+// activity names are the long text on this board, and Info rides along inside
+// that cell as a pill rather than claiming a column that's mostly empty.
+const COLUMNS = "minmax(9.5rem, 13rem) 1fr minmax(7rem, 11rem)";
 
 function NowTime({ timeFrom, progress }: { timeFrom: string; progress: number }) {
   return (
@@ -45,8 +47,6 @@ function HeaderRow() {
     >
       <span className="eyebrow">Tijd</span>
       <span className="eyebrow">Activiteit</span>
-      <span className="eyebrow">Begeleider</span>
-      <span className="eyebrow">Info</span>
       <span className="eyebrow text-right">Locatie</span>
     </div>
   );
@@ -220,16 +220,17 @@ export function SpecialOccasionBoard({
                     </>
                   )}
                 </span>
-                <span className="font-display text-[1.75em] font-bold leading-none">
-                  {entry.activity}
-                </span>
-                <span className="truncate text-[1.5em] font-light leading-none text-muted">
-                  {entry.supervisor}
-                </span>
-                <span className="truncate text-[1.3em] leading-none text-muted">
-                  {entry.info}
-                </span>
-                <span className="truncate text-right font-display text-[1.65em] font-bold leading-none text-accent">
+                <div className="flex min-w-0 items-baseline gap-[0.6em]">
+                  <span className="truncate-tight font-display text-[1.75em] font-bold">
+                    {entry.activity}
+                  </span>
+                  {entry.info && (
+                    <span className="min-w-0 max-w-[45%] truncate-tight rounded-sm bg-accent/15 px-[0.6em] py-[0.26em] text-[1.15em] font-normal text-accent">
+                      {entry.info}
+                    </span>
+                  )}
+                </div>
+                <span className="truncate-tight text-right font-display text-[1.65em] font-bold text-accent">
                   {entry.location || "—"}
                 </span>
               </div>

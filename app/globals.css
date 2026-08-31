@@ -157,6 +157,20 @@ body {
   }
 }
 
+/*
+ * Single-line text that gets cut to fit. `truncate`'s overflow:hidden clips at
+ * the line box, and at leading-none that box is exactly 1em — shorter than
+ * Averia's own ascent-to-descent (1.23em), so the tails of g, j, p and / were
+ * sliced off. 1.25 covers the full em box, so no glyph can reach the edge,
+ * and costs a row a few tenths of a pixel of height.
+ */
+@utility truncate-tight {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
 /* Small caps label used for column headers and zone titles. */
 .eyebrow {
   font-family: var(--font-mono);

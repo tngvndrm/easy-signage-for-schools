@@ -123,7 +123,6 @@ export const demoSpecialOccasion: SpecialOccasion = {
       timeFromMinutes: 8 * 60,
       timeToMinutes: 9 * 60 + 30,
       activity: "Opening",
-      supervisor: "De Smet",
       location: "Aula",
     },
     {
@@ -132,7 +131,6 @@ export const demoSpecialOccasion: SpecialOccasion = {
       timeFromMinutes: 9 * 60 + 30,
       timeToMinutes: 11 * 60,
       activity: "100m loop",
-      supervisor: "Van den Berg",
       location: "Sportveld",
     },
     {
@@ -141,7 +139,6 @@ export const demoSpecialOccasion: SpecialOccasion = {
       timeFromMinutes: 11 * 60,
       timeToMinutes: 11 * 60 + 15,
       activity: "Pauze",
-      supervisor: "",
       location: "Cafetaria",
     },
     {
@@ -150,7 +147,6 @@ export const demoSpecialOccasion: SpecialOccasion = {
       timeFromMinutes: 11 * 60 + 15,
       timeToMinutes: 12 * 60 + 30,
       activity: "Estafette",
-      supervisor: "Jansen",
       info: "Groepen A–D",
       location: "Sportveld",
     },
@@ -160,7 +156,6 @@ export const demoSpecialOccasion: SpecialOccasion = {
       timeFromMinutes: 12 * 60 + 30,
       timeToMinutes: 13 * 60 + 30,
       activity: "Lunch & vrij spel",
-      supervisor: "",
       info: "Meegebracht",
       location: "Terras",
     },
@@ -170,7 +165,6 @@ export const demoSpecialOccasion: SpecialOccasion = {
       timeFromMinutes: 13 * 60 + 30,
       timeToMinutes: 15 * 60,
       activity: "Slotsprint & prijsuitreiking",
-      supervisor: "Directie",
       location: "Sportveld",
     },
   ],

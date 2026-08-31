@@ -75,7 +75,6 @@ const COLUMNS = {
   timeFrom: ["tijdvan", "tijdvanaf", "begintijd", "start"],
   timeTo: ["tijdtot", "tijdtotenmet", "eindtijd", "einde"],
   activity: ["activiteit", "vak", "subject", "activity"],
-  supervisor: ["begeleider", "leerkracht", "teacher", "supervisor"],
   info: ["info", "opmerking", "note", "toelichting"],
   location: ["locatie", "lokaal", "location", "room"],
 };
@@ -200,7 +199,6 @@ export async function readSpecialOccasions(
     const rawTimeFrom = cell(columns.timeFrom);
     const rawTimeTo = cell(columns.timeTo);
     const activity = cell(columns.activity);
-    const supervisor = cell(columns.supervisor);
     const info = cell(columns.info);
     const location = cell(columns.location);
 
@@ -215,7 +213,6 @@ export async function readSpecialOccasions(
       timeFromMinutes,
       ...(timeToMinutesVal !== undefined ? { timeToMinutes: timeToMinutesVal } : {}),
       activity,
-      supervisor,
       ...(info ? { info } : {}),
       ...(location ? { location } : {}),
     };
