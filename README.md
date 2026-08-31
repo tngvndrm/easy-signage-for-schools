@@ -41,8 +41,11 @@ Each screen's **pace** is staff-set too — how long a notice holds the message
 zone, how often a full-screen item interrupts, and how long it stays — and a
 hairline along the bottom edge shows where the screen is in that cycle. Open the
 same URL on a laptop and you can step through that cycle or hold it, at your own
-pace instead of the corridor's. See [Per-screen settings](#per-screen-settings)
-and [One interruption at a time](#one-interruption-at-a-time).
+pace instead of the corridor's. So are its **standby hours**, which black the
+board out overnight — on the wall, at least; move a pointer and the board stays
+up for you. See [Per-screen settings](#per-screen-settings),
+[Standby hours](#standby-hours) and
+[One interruption at a time](#one-interruption-at-a-time).
 
 **Previews** (also linked from `/`), appended to a screen URL:
 
@@ -56,6 +59,7 @@ and [One interruption at a time](#one-interruption-at-a-time).
 | `?takeover=1` | a Big Slide full-screen takeover (sample) |
 | `?occasion=1` | the special-occasion board (sample if none scheduled) |
 | `?build=1`, `?build=0` | force the corner build stamp on / off for this screen |
+| `?blackout=1`, `?blackout=0` | force the standby black screen on / off for this screen |
 
 ### Look & feel
 
@@ -366,10 +370,10 @@ where a sister school forks and deploys anyway.
 A `Settings` tab lets staff retune each screen live — no code, no redeploy. One
 row per screen (`Display` = 1/2/3):
 
-| Display | Name | Color Scheme | Dark theme start | Light theme start | Message Cycle Time | Full Screen Interval | Full Screen Time |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Inkomhal | Coral | 18:00 | 8:30 | 12 | 180 | 20 |
-| 2 | Blok B | Gold | 18:00 | 8:30 | 12 | 180 | 20 |
+| Display | Name | Color Scheme | Dark theme start | Light theme start | Turn Off | Turn On | Message Cycle Time | Full Screen Interval | Full Screen Time |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Inkomhal | Coral | 18:00 | 8:30 | 18:00 | 8:30 | 12 | 180 | 20 |
+| 2 | Blok B | Gold | 18:00 | 8:30 | | | 12 | 180 | 20 |
 
 - **Name** shows in the status bar instead of "Scherm 1".
 - **Color Scheme** is the accent — `Coral`, `Gold` or `Blue`.
@@ -377,6 +381,8 @@ row per screen (`Display` = 1/2/3):
   times (dark from 18:00 until 8:30, here). Leave both blank to stay on the
   environment default. Evaluated against the host clock and refreshed on the
   30-second poll, so a screen switches within half a minute of the time.
+- **Turn Off / Turn On** are the standby hours — see
+  [Standby hours](#standby-hours) below.
 - **Message Cycle Time** (seconds) is how long each notice holds the message
   zone. Default 12. A message with its own duration still wins.
 - **Full Screen Interval** (seconds) is how often the board hands the screen to
@@ -384,13 +390,48 @@ row per screen (`Display` = 1/2/3):
   occasion. Default 180 (3 minutes).
 - **Full Screen Time** (seconds) is how long each of those bursts stays up
   before the dashboard returns. Default 20.
-- All three are per screen, and blank or unparseable means "use the default", so
-  a typo slows nothing down.
-- `Turn Off` / `Turn On` are reserved for the TV-power (CEC) feature
-  ([`pi/tv-power/`](pi/tv-power)); nothing reads them yet.
+- All three timings are per screen, and blank or unparseable means "use the
+  default", so a typo slows nothing down.
 
 `?theme=` / `?accent=` on a screen URL still override, for previewing. Changes to
 the tab land on the next poll — no reload needed.
+
+### Standby hours
+
+`Turn Off` and `Turn On` black a screen out between those times: the board is
+replaced by a black screen carrying one dim line — the screen's name and when it
+comes back — and the dashboard returns on its own in the morning. This is aimed
+at the wall panels; anyone reading the board with a mouse in hand is left alone
+(see the pointer note below).
+
+This is a stand-in for genuinely powering the TV down over HDMI-CEC, which we
+can't do here: the Pis are powered from their TV's USB port, so cutting the TV's
+power takes the board down with it and there's nothing left to wake it. The
+panel stays lit, but it shows black instead of a substitution board nobody is in
+the building to read. The CEC agent for schools whose Pis have their own power
+supply is still in [`pi/tv-power/`](pi/tv-power), unwired.
+
+- Both cells are needed. One on its own leaves the screen awake, rather than
+  guessing what the other was meant to be.
+- The window normally wraps past midnight (off 18:00, back 8:30). A same-day
+  window (off 12:00, on 13:00) works the same way.
+- Two identical times mean a window of zero length, never a permanent one — a
+  board the sheet can't turn back on is the failure worth ruling out.
+- **Every day, weekends included.** There's no per-day schedule and no holiday
+  exception list; the same two times apply all week.
+- Judged on each screen's own clock, not the server's, and rechecked every 15
+  seconds. A screen that has lost the host still puts itself to bed at six and
+  wakes at half eight on the window it last heard about.
+- Standby outranks everything, a permanent Big Slide included.
+- **Moving a pointer wakes it, and keeps it awake for five minutes.** Standby is
+  for the corridor; a teacher who opens the same URL from home at nine in the
+  evening gets the board. A wall panel in a cage has no mouse, so nothing ever
+  fires this and it sleeps on schedule.
+- `?blackout=1` shows the standby screen at any hour and `?blackout=0` holds the
+  board up during standby hours, so either can be checked from a desk. Both
+  ignore the pointer, so the standby screen can actually be looked at. `?now=`
+  reaches the schedule too: `?now=20:15` shows that evening, pointer rules and
+  all.
 
 ### Display behaviour
 
@@ -554,9 +595,14 @@ working — is in **[`docs/deploy-windows.md`](docs/deploy-windows.md)**.
 
 ## Not built yet
 
-- **TV on/off scheduling** (HDMI-CEC) — a standalone Pi-side agent lives in
-  [`pi/tv-power/`](pi/tv-power), driven by a local schedule file on each Pi.
-  It is not wired to the sheet; the Settings tab's `Turn Off` / `Turn On`
-  columns are reserved for it but currently unread.
+- **Real TV on/off scheduling** (HDMI-CEC) — the standalone Pi-side agent in
+  [`pi/tv-power/`](pi/tv-power) is driven by a local schedule file on each Pi and
+  isn't wired to the sheet. It also can't be used as things stand: the Pis take
+  their power from the TV's USB port, so a TV in standby is a Pi with no power.
+  [Standby hours](#standby-hours) black the board out instead, from the same two
+  sheet columns the agent would read.
+- **Per-day standby hours** — `Turn Off` / `Turn On` apply the same times every
+  day of the week. Weekends and holidays would need a day column or a dated
+  exception list, as sketched in [SPEC.md](SPEC.md).
 - **OneRoster birthdays** — deferred in the spec; moot now that the birthday
   list lives in the sheet.

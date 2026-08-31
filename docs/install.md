@@ -364,8 +364,12 @@ also what picks up new *code* after an update (see "Updating"):
 echo '30 3 * * * root /sbin/shutdown -r now' | sudo tee /etc/cron.d/infoborden-reboot
 ```
 
-(If the Pi also runs the TV-power schedule, keep the reboot inside the TV's
-off window — see [`pi/tv-power/README.md`](../pi/tv-power/README.md).)
+Keep that 3:30 inside the screen's **standby hours** (the Settings tab's
+`Turn Off` / `Turn On`) if it has any, so nobody ever walks past a rebooting
+board. It comes back up black on its own — the standby screen is server-rendered,
+so a Pi restarting at half three doesn't flash the dashboard at an empty hall.
+The same applies if the Pi runs the CEC agent instead — see
+[`pi/tv-power/README.md`](../pi/tv-power/README.md).
 
 ## If the screen misbehaves
 
