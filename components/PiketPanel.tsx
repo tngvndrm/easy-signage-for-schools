@@ -1,6 +1,7 @@
 "use client";
 
 import { Clock } from "./Clock";
+import { piketColumn } from "./piket-shared";
 import { useCurrentSlot, useOverrideDay } from "./useCurrentSlot";
 import type { Slot } from "@/lib/schedule";
 import type { PiketRoster } from "@/lib/types";
@@ -10,13 +11,6 @@ const COLUMNS = "9em repeat(5, minmax(0, 1fr))";
 
 /** Block rows that fit at full size; beyond that the grid scales down as one. */
 const COMFORTABLE_BLOCKS = 7;
-
-/** Monday = 0, matching `PiketRoster.days`. Null outside the school week. */
-function weekdayIndex(isoDate: string): number | null {
-  // Midday, so no timezone can push the date onto a neighbouring day.
-  const day = new Date(`${isoDate}T12:00:00`).getDay();
-  return day >= 1 && day <= 5 ? day - 1 : null;
-}
 
 /**
  * The lesson a break runs into. During the middagpauze the staff room is at its
@@ -64,14 +58,7 @@ export function PiketPanel({
   const slot = useCurrentSlot(schedule);
   const overrideDay = useOverrideDay();
 
-  // `?now=wed+12:45` moves the marker to another weekday; the column follows it
-  // rather than staying on the real today, so a preview stays coherent.
-  const today =
-    overrideDay !== null
-      ? overrideDay >= 1 && overrideDay <= 5
-        ? overrideDay - 1
-        : null
-      : weekdayIndex(boardDate);
+  const today = piketColumn(boardDate, overrideDay);
 
   const livePeriod = slot?.kind === "lesson" ? slot.period : null;
   const nextPeriod =

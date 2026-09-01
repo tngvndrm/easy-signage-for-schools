@@ -126,6 +126,43 @@ export function slotAt(
   return null;
 }
 
+/**
+ * The first lesson period still to come on this day, or null once the last one
+ * has started. Days the school runs short are respected, so a Wednesday
+ * afternoon has nothing coming rather than the periods the table would list.
+ */
+export function upcomingPeriod(
+  schedule: Slot[],
+  at: { day: number; minutes: number },
+): number | null {
+  for (const slot of schedule) {
+    if (slot.kind !== "lesson" || !runsOn(slot, at.day)) continue;
+    if (slot.start >= at.minutes) return slot.period;
+  }
+  return null;
+}
+
+/**
+ * The window a run of lesson periods occupies, from the start of the first to
+ * the end of the last — the span a standby block is on for. Null when none of
+ * the periods run on this day.
+ */
+export function periodSpan(
+  schedule: Slot[],
+  periods: number[],
+  day: number,
+): { start: number; end: number } | null {
+  let start = Infinity;
+  let end = -Infinity;
+  for (const slot of schedule) {
+    if (slot.kind !== "lesson" || !runsOn(slot, day)) continue;
+    if (!periods.includes(slot.period)) continue;
+    start = Math.min(start, slot.start);
+    end = Math.max(end, slot.end);
+  }
+  return end > start ? { start, end } : null;
+}
+
 /** The lesson or break happening right now, or null outside school hours. */
 export function currentSlot(
   schedule: Slot[],
