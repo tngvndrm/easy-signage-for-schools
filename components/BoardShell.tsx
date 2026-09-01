@@ -13,6 +13,7 @@ import { EventPoster } from "./EventPoster";
 import { KeyPanel } from "./KeyPanel";
 import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
+import { PiketPanel } from "./PiketPanel";
 import { SpecialOccasionBoard } from "./SpecialOccasionBoard";
 import { SubstitutionBoard } from "./SubstitutionBoard";
 import { useBlackout } from "./useBlackout";
@@ -38,7 +39,12 @@ const CACHE_KEY = "infoborden:board";
 /** Which server state this tab has already reloaded for — see useBuildReload. */
 const RELOADED_KEY = "infoborden:reloaded-for";
 
-type Interrupt = "keys" | "event" | "bigslide" | "specialoccasion";
+type Interrupt =
+  | "keys"
+  | "event"
+  | "bigslide"
+  | "specialoccasion"
+  | "piket";
 
 /** One turn of the full-screen "Permanent" rotation — see `permanentItems`. */
 type PermanentItem =
@@ -107,6 +113,7 @@ export function BoardShell({
   screenId,
   forceKeyPanel = false,
   forceEvent = false,
+  forcePiket = false,
 }: {
   initial: BoardData;
   screenId: string;
@@ -114,6 +121,8 @@ export function BoardShell({
   forceKeyPanel?: boolean;
   /** Preview: hold the event poster on screen instead of cycling it. */
   forceEvent?: boolean;
+  /** Preview: hold the standby roster on screen instead of cycling it. */
+  forcePiket?: boolean;
 }) {
   const [data, setData] = useState<BoardData>(initial);
   const [stale, setStale] = useState(false);
@@ -202,6 +211,10 @@ export function BoardShell({
   if (event) queue.push("event");
   if (periodicSlides.length) queue.push("bigslide");
   if (data.periodicSpecialOccasions.length) queue.push("specialoccasion");
+  // Standing reference rather than news, so it takes its turn last — and only
+  // on the screens whose Settings row asked for it (the server sends it to no
+  // other screen at all).
+  if (data.piket) queue.push("piket");
   const queueKey = queue.join(",");
 
   /*
@@ -215,6 +228,7 @@ export function BoardShell({
     event: 1,
     bigslide: periodicSlides.length,
     specialoccasion: data.periodicSpecialOccasions.length,
+    piket: 1,
   };
   const cycleTurns = queue.length
     ? queue.length * Math.max(...queue.map((kind) => kindCounts[kind]))
@@ -365,6 +379,7 @@ export function BoardShell({
   const showKeys =
     (showing === "keys" || forceKeyPanel) && data.keys.length > 0;
   const showEvent = (showing === "event" || forceEvent) && event !== null;
+  const showPiket = (showing === "piket" || forcePiket) && data.piket !== null;
   const periodicSlide =
     showing === "bigslide" && periodicSlides.length > 0
       ? periodicSlides[mod(itemAt(turn), periodicSlides.length)]
@@ -625,6 +640,38 @@ export function BoardShell({
         />
         {!paused && <BurstProgress seconds={burstMs / 1000} />}
         {controls()}
+      </main>
+    );
+  }
+
+  /*
+   * The roster is a grid — five days by seven blocks — so it takes the whole
+   * screen for its burst rather than the substitution board's slot. At the
+   * dashboard's size its names came out smaller than anything else on the
+   * board, which is the one thing a roster on a wall cannot be. It keeps its
+   * own clock instead, since the board header goes with the rest.
+   */
+  if (showPiket && data.piket) {
+    return (
+      <main
+        className="kiosk relative flex h-screen w-screen flex-col overflow-hidden bg-bg p-[1.2rem] text-text"
+        {...root}
+      >
+        <PiketPanel
+          roster={data.piket}
+          schedule={data.schedule}
+          boardDate={data.date}
+          fullscreen
+        />
+        {/* Not under `forcePiket`: the preview holds the panel indefinitely,
+            so neither a draining bar nor a transport would be telling the
+            truth about what the rotation is doing. */}
+        {showing === "piket" && (
+          <>
+            {!paused && <BurstProgress seconds={burstMs / 1000} />}
+            {controls()}
+          </>
+        )}
       </main>
     );
   }

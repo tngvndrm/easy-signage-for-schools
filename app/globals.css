@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 /*
+ * The board's theme is a setting, not a preference — a kiosk has nobody to
+ * prefer anything — so `dark:` follows the `data-theme` the screen was rendered
+ * with, not the panel's own `prefers-color-scheme`. Use it only where a colour
+ * genuinely has to differ per theme beyond the tokens below: a translucent
+ * accent over a dark surface, say, which needs more of itself to read at the
+ * same strength.
+ */
+@custom-variant dark ([data-theme="dark"] &);
+
+/*
  * Steinerschool Gent design tokens.
  * Source: Brand & Style Guide — three logo colours, the Averia typeface, and
  * organic, uneven shapes that avoid sharp 90° corners wherever possible.

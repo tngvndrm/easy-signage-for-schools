@@ -27,15 +27,16 @@ well inside what one small host handles.
 
 Everything in the spec, all reading from the sheet:
 
-- `/screen/1`, `/screen/2`, `/screen/3` — the board. Identical content; the
+- `/screen/1`, `/screen/2`, `/screen/3` — the board. The same content
+  everywhere, bar the standby roster, which is for the staff room's screen; the
   screen number only shows in the status bar.
 - `/api/board` — the single JSON payload the board polls.
 - `/` — index with links to each screen and to every preview below.
 
-Substitutions, messages, birthdays, classroom keys, events and full-screen Big
-Slide takeovers all come from their sheet tabs. With `SHEET_ID` unset the board
-runs on `lib/demo-data.ts` and shows a **Demo-data** badge; set it and the badge
-disappears.
+Substitutions, messages, birthdays, classroom keys, events, the standby roster
+and full-screen Big Slide takeovers all come from their sheet tabs. With
+`SHEET_ID` unset the board runs on `lib/demo-data.ts` and shows a **Demo-data**
+badge; set it and the badge disappears.
 
 Each screen's **pace** is staff-set too — how long a notice holds the message
 zone, how often a full-screen item interrupts, and how long it stays — and a
@@ -55,6 +56,7 @@ up for you. See [Per-screen settings](#per-screen-settings),
 | `?date=2026-09-02` | the board for another school day |
 | `?theme=dark`, `?accent=blue`/`gold` | theme / accent overrides |
 | `?keypanel=1`, `?keys=3` | the classroom-key panel / the in-rotation key card |
+| `?piket=1` | the standby roster, on any screen and without waiting for its turn |
 | `?event=1` | the event poster (sample if none scheduled) |
 | `?takeover=1` | a Big Slide full-screen takeover (sample) |
 | `?occasion=1` | the special-occasion board (sample if none scheduled) |
@@ -178,6 +180,64 @@ To see either presentation without waiting for its cycle, append to a screen URL
 
 Both are also linked from the site index at `/`.
 
+### Piketrooster (`Piket` tab)
+
+The standby roster: who is on call per lesson block, so a sudden absence can be
+covered. It's the staff room's reference, so it shows **only on the screens
+whose `Settings` row says so** — the first content on the board that isn't
+identical on all three. A corridor full of students has no use for it.
+
+It's also the one tab with **no dates in it**: one standing week that holds all
+year, so nothing rolls over and Monday shows Monday because the board reads the
+day, not because anyone moved a row. When a new version is drawn up, staff paste
+it over the old one — and because that's the one thing that can go stale
+unnoticed, the sheet's own **version line is printed on the wall** beside the
+title.
+
+Paste the roster in the shape it's already kept: weekdays across the top, lesson
+blocks down the side, the names to call underneath each other. Merged `Lesuur`
+cells are fine — a merged cell gives its value on its first row only, which is
+exactly the "blank means same as above" the reader expects. A title/version line
+above the table is expected too; the weekday header is found, not assumed.
+
+| Lesuur | MAANDAG | DINSDAG | WOENSDAG | DONDERDAG | VRIJDAG |
+| --- | --- | --- | --- | --- | --- |
+| PERIODE | Anke | Dries | Gitte | Joris | Mien |
+| | Bram | Eva | Hugo | Kaat | Noor |
+| 3e LESUUR | Puck | Tuur | Yara | Bram | Eva |
+| | Rik | Wies | Zeno | Cato | Ferre |
+
+- A block label's **number is its lesson period** — `3e LESUUR` is period 3,
+  `1-2` or `1 & 2` both. A named block above the first numbered one (`PERIODE`)
+  takes the periods before it, so it marks live through periods 1 and 2.
+- An empty cell, a `/` or a `-` all mean **nobody** — Wednesday afternoon, or a
+  slot nobody covers. Two names in one cell (`Wim / Marieke`) stay as written.
+- **Cell colours don't travel.** The board reads values, not formatting, so
+  highlighting a name yellow or red in the sheet changes nothing on the wall. If
+  a marking matters there, it has to be in the text.
+
+On screen it's the whole week at once, with the moment doing the pointing:
+today's column is raised out of the greyed-out rest, the lesson block that's
+running carries the same accent marker and filling bar the substitution board
+uses, and where the two meet is the cell that answers "who do I call now".
+Every day reads at one type size — today is set in bold on a card per lesson
+block, rather than larger, because a column that fills its rows is a column
+whose blocks run together, and the grouping is what makes the grid legible. Over
+a break no block is live, so the one that starts next is outlined and labelled
+**straks** — the middagpauze is when the staff room is fullest and reading
+ahead is exactly what's wanted. On a weekend nothing is today, and the five days
+read at equal weight.
+
+It takes the screen for its turn in the rotation (see
+[One interruption at a time](#one-interruption-at-a-time)) rather than sitting
+in the dashboard's main area like the key panel: five days by seven blocks is a
+grid, and at the dashboard's size its names came out smaller than anything else
+on the board — the one thing a roster on a wall can't be.
+
+**Not handled yet: swaps on the day.** The roster is the standing arrangement,
+so if two people trade a slot this week the board still shows the standing name.
+Worth adding a small exceptions block if that turns out to happen often.
+
 ### Messages
 
 The rotating notices — pickup calls, reminders, fundraiser posters — come from
@@ -252,8 +312,8 @@ Preview with `?event=1`, which falls back to a sample when nothing is scheduled.
 
 ### One interruption at a time
 
-The key panel, the event poster and periodic (`Yes`) Big Slides share a single
-rotation rather than running their own timers — independent timers would
+The key panel, the event poster, the standby roster and periodic (`Yes`) Big
+Slides share a single rotation rather than running their own timers — independent timers would
 eventually fire together and fight over the screen. Every `Full Screen Interval`
 (3 minutes by default) the board shows the next one due for `Full Screen Time`,
 then returns to the dashboard. Anything marked `Permanent` — a Big Slide message
@@ -376,10 +436,11 @@ where a sister school forks and deploys anyway.
 A `Settings` tab lets staff retune each screen live — no code, no redeploy. One
 row per screen (`Display` = 1/2/3):
 
-| Display | Name | Color Scheme | Dark theme start | Light theme start | Turn Off | Turn On | Message Cycle Time | Full Screen Interval | Full Screen Time |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Inkomhal | Coral | 18:00 | 8:30 | 18:00 | 8:30 | 12 | 180 | 20 |
-| 2 | Blok B | Gold | 18:00 | 8:30 | | | 12 | 180 | 20 |
+| Display | Name | Color Scheme | Dark theme start | Light theme start | Turn Off | Turn On | Message Cycle Time | Full Screen Interval | Full Screen Time | Piket |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Inkomhal | Coral | 18:00 | 8:30 | 18:00 | 8:30 | 12 | 180 | 20 | |
+| 2 | Blok B | Gold | 18:00 | 8:30 | | | 12 | 180 | 20 | |
+| 3 | Leraarskamer | Blue | 18:00 | 8:30 | | | 12 | 180 | 20 | Yes |
 
 - **Name** shows in the status bar instead of "Scherm 1".
 - **Color Scheme** is the accent — `Coral`, `Gold` or `Blue`.
@@ -396,6 +457,10 @@ row per screen (`Display` = 1/2/3):
   occasion. Default 180 (3 minutes).
 - **Full Screen Time** (seconds) is how long each of those bursts stays up
   before the dashboard returns. Default 20.
+- **Piket** puts the [standby roster](#piketrooster-piket-tab) in that screen's
+  rotation — `Yes` for the staff room, blank everywhere else. Blank is off, so a
+  school that never adds the column gets no roster rather than one on every
+  screen.
 - All three timings are per screen, and blank or unparseable means "use the
   default", so a typo slows nothing down.
 
@@ -510,8 +575,9 @@ dormant and the rest of the board is unaffected. The header rows:
 | `Evenementen` | `Datum · Tijd · Toon vanaf · Klas · Titel · Synopsis · Poster` |
 | `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
-| `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time` |
+| `Settings` | `Display · Name · Color Scheme · Dark theme start · Light theme start · Turn Off · Turn On · Message Cycle Time · Full Screen Interval · Full Screen Time · Piket` |
 | `Schedule` | `Lesuur · Starttijd · Eindtijd · Toon pauzelijn` |
+| `Piket` | `Lesuur · Maandag · Dinsdag · Woensdag · Donderdag · Vrijdag` |
 | `Speciale Gelegenheden` | `Datum · Titel · Toon vanaf · Toon tot · BigSlide · Tijd van · Tijd tot · Activiteit · Info · Locatie` |
 | `Style` | `Logo · School` + a `Color Name / Color Code` table |
 | `Speciale Gelegenheden` | `Datum · Titel · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · BigSlide · Tijd van · Tijd tot · Activiteit · Info · Locatie` |
@@ -544,9 +610,10 @@ rather than taking the defaults, widen them there too:
 | `MESSAGES_SHEET_RANGE` | `Mededelingen!A1:H200` | `Mededelingen!A1:J200` |
 | `SPECIAL_OCCASIONS_RANGE` | `Speciale Gelegenheden!A1:K400` | `Speciale Gelegenheden!A1:M400` |
 
-The same trap bit the `Settings` tab earlier: it's ten columns wide, so a pinned
-`Settings!A1:H30` silently drops `Full Screen Interval` and `Full Screen Time`
-and the board quietly falls back to its built-in pace. `Settings!A1:L30`.
+The same trap bit the `Settings` tab earlier: it's eleven columns wide now, so a
+pinned `Settings!A1:H30` silently drops `Full Screen Interval`, `Full Screen
+Time` and `Piket` — and the board quietly falls back to its built-in pace with
+no roster anywhere. `Settings!A1:L30`.
 
 Append `?date=2026-09-02` to a screen URL (or `/api/board`) to render another
 school day — useful for checking entries before the day arrives. A previewed day

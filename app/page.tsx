@@ -12,6 +12,7 @@ const PREVIEWS = [
   { href: "/screen/1?occasion=1", label: "Speciale gelegenheid" },
   { href: "/screen/1?keypanel=1", label: "Sleutels — hoofdvlak" },
   { href: "/screen/1?keys=3", label: "Sleutels — in mededelingen" },
+  { href: "/screen/3?piket=1", label: "Piketrooster" },
   { href: "/screen/1?now=11:20", label: "Lesuur 3 bezig" },
   { href: "/screen/1?blackout=1", label: "Stand-by — scherm uit" },
 ];

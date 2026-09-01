@@ -1,4 +1,10 @@
-import { fetchRange, findHeader, MissingTabError, normalizeText } from "./sheets";
+import {
+  fetchRange,
+  findHeader,
+  isTicked,
+  MissingTabError,
+  normalizeText,
+} from "./sheets";
 import { ACCENTS, type Accent } from "./theme";
 
 const SETTINGS_RANGE = process.env.SETTINGS_SHEET_RANGE ?? "Settings!A1:L30";
@@ -26,6 +32,8 @@ export type ScreenSettings = {
   fullScreenIntervalSec: number | null;
   /** Seconds a full-screen burst holds; null falls back to the default. */
   fullScreenSec: number | null;
+  /** Show the standby roster on this screen — the staff room, in practice. */
+  piket: boolean;
 };
 
 export const EMPTY_SETTINGS: ScreenSettings = {
@@ -38,6 +46,7 @@ export const EMPTY_SETTINGS: ScreenSettings = {
   messageCycleSec: null,
   fullScreenIntervalSec: null,
   fullScreenSec: null,
+  piket: false,
 };
 
 const COLUMNS = {
@@ -51,6 +60,7 @@ const COLUMNS = {
   messageCycle: ["messagecycletime", "messagecycle", "berichttijd", "mededelingstijd"],
   fullScreenInterval: ["fullscreeninterval", "volledigscherminterval", "scherminterval"],
   fullScreen: ["fullscreentime", "fullscreen", "volledigschermtijd", "schermtijd"],
+  piket: ["piket", "piketrooster", "standby"],
 };
 
 /** "18:00", "8:30" -> minutes since midnight; null if unparseable. */
@@ -126,6 +136,9 @@ export async function readSettings(): Promise<Record<string, ScreenSettings>> {
       messageCycleSec: parseSeconds(cell(columns.messageCycle)),
       fullScreenIntervalSec: parseSeconds(cell(columns.fullScreenInterval)),
       fullScreenSec: parseSeconds(cell(columns.fullScreen)),
+      // Blank is off: a school that never adds the column gets no roster
+      // anywhere, rather than one on all three screens.
+      piket: isTicked(cell(columns.piket)),
     };
   }
   return out;

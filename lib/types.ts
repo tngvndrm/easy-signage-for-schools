@@ -143,6 +143,12 @@ export type BoardData = {
   substitutions: Substitution[];
   /** The day's timetable — drives the "now" marker and the pauze dividers. */
   schedule: Slot[];
+  /**
+   * The standby roster, for the screens whose Settings row asks for it; null
+   * everywhere else. Per screen rather than global: it is the staff room's
+   * reference, and a corridor full of students has no use for it.
+   */
+  piket: PiketRoster | null;
   messages: BoardMessage[];
   birthdays: Birthday[];
   /** Outstanding classroom-key duties, late ones first. */
@@ -179,4 +185,27 @@ export type BoardData = {
    * today" — an empty board must never be able to mean a broken one.
    */
   substitutionsUnavailable: boolean;
+};
+
+/** One lesson block of the standby roster, e.g. "PERIODE" or "3e LESUUR". */
+export type PiketBlock = {
+  /** The label as the sheet writes it — the staff room's own vocabulary. */
+  label: string;
+  /** Every lesson period the block covers; empty when the label names none. */
+  periods: number[];
+  /** Names to call, in order, per weekday — Monday first, five entries. */
+  days: string[][];
+};
+
+/**
+ * The standby roster: one standing week, not a day's data. It changes only
+ * when a new version is drawn up, which is why the sheet's own title and
+ * version line travel with it to the wall.
+ */
+export type PiketRoster = {
+  title: string | null;
+  version: string | null;
+  /** Weekday headings as the sheet writes them, Monday first. */
+  dayLabels: string[];
+  blocks: PiketBlock[];
 };
