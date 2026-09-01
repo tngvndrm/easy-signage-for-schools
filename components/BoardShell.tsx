@@ -13,6 +13,7 @@ import { EventPoster } from "./EventPoster";
 import { KeyPanel } from "./KeyPanel";
 import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
+import { PiketNow } from "./PiketNow";
 import { PiketPanel } from "./PiketPanel";
 import { SpecialOccasionBoard } from "./SpecialOccasionBoard";
 import { SubstitutionBoard } from "./SubstitutionBoard";
@@ -754,6 +755,14 @@ export function BoardShell({
               durationSec={data.timing.messageCycleSec}
               tall
             />
+            {data.piket && (
+              <PiketNow
+                roster={data.piket}
+                schedule={data.schedule}
+                boardDate={data.date}
+                className="w-full shrink-0"
+              />
+            )}
             <BirthdayZone
               birthdays={data.birthdays}
               className="w-full shrink-0"
@@ -782,6 +791,13 @@ export function BoardShell({
               keyDuties={manyKeys ? [] : data.keys}
               durationSec={data.timing.messageCycleSec}
             />
+            {data.piket && (
+              <PiketNow
+                roster={data.piket}
+                schedule={data.schedule}
+                boardDate={data.date}
+              />
+            )}
             <BirthdayZone birthdays={data.birthdays} />
           </div>
         </>

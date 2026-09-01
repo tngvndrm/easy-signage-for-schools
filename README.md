@@ -234,6 +234,32 @@ in the dashboard's main area like the key panel: five days by seven blocks is a
 grid, and at the dashboard's size its names came out smaller than anything else
 on the board — the one thing a roster on a wall can't be.
 
+#### Who's on, without waiting for the roster's turn
+
+The week needs the screen, but the *one line* off it doesn't — and a sudden
+absence is exactly the moment nobody wants to stand in front of a board waiting
+for the right slide to come round. So a small **Piket** card sits in the
+dashboard's bottom row, between the notices and the birthdays, on the same
+screens the roster itself is on:
+
+- **Nu** — the block that's running: every name in the accent, at one size, in
+  the sheet's own order and separated by a dot. The order already says who to
+  try first, so nothing is set larger to say it twice. The bar under it drains
+  over the *whole block*, not the lesson inside it, because what the staff room
+  is waiting for is the handover.
+- **Straks** — who takes over next, in plain text underneath.
+
+A line of three long names scales itself down rather than dropping the last one:
+the third name is exactly the one you reach for when the first two don't answer.
+
+Between lessons nothing is running, so both lines are ones still to come
+(**straks** and **daarna**) rather than a name whose hour is over — the same
+reading-ahead the full roster does over a break. Blocks nobody covers are
+skipped rather than shown empty, so a Wednesday shows its morning and then the
+card leaves the row, exactly as the birthday card does on a day with no
+birthdays. Once the last lesson of the day has started there's nothing left to
+point at, and it goes.
+
 **Not handled yet: swaps on the day.** The roster is the standing arrangement,
 so if two people trade a slot this week the board still shows the standing name.
 Worth adding a small exceptions block if that turns out to happen often.
@@ -458,9 +484,9 @@ row per screen (`Display` = 1/2/3):
 - **Full Screen Time** (seconds) is how long each of those bursts stays up
   before the dashboard returns. Default 20.
 - **Piket** puts the [standby roster](#piketrooster-piket-tab) in that screen's
-  rotation — `Yes` for the staff room, blank everywhere else. Blank is off, so a
-  school that never adds the column gets no roster rather than one on every
-  screen.
+  rotation, and the small "who's on now" card in its dashboard — `Yes` for the
+  staff room, blank everywhere else. Blank is off, so a school that never adds
+  the column gets no roster rather than one on every screen.
 - All three timings are per screen, and blank or unparseable means "use the
   default", so a typo slows nothing down.
 

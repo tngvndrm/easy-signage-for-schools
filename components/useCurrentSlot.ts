@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   currentSlot,
   parseTimeOverride,
+  schoolTime,
   slotAt,
   type NowSlot,
   type Slot,
@@ -39,6 +40,37 @@ export function useCurrentSlot(schedule: Slot[]): NowSlot | null {
   }, [schedule]);
 
   return slot;
+}
+
+/**
+ * The school clock itself: the weekday and the minutes since midnight, or null
+ * until the first tick — the same "agree with the server, then correct" as
+ * above.
+ *
+ * `useCurrentSlot` answers what is running; this answers when it is, which is
+ * what a caller needs to look past the running slot to what follows it.
+ * `?now=` freezes it in exactly the same way.
+ */
+export function useSchoolMoment(): { day: number; minutes: number } | null {
+  const [moment, setMoment] = useState<{ day: number; minutes: number } | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const override = new URLSearchParams(window.location.search).get("now");
+    const frozen = override ? parseTimeOverride(override) : null;
+    if (frozen) {
+      setMoment(frozen);
+      return;
+    }
+
+    const tick = () => setMoment(schoolTime());
+    tick();
+    const timer = setInterval(tick, TICK_MS);
+    return () => clearInterval(timer);
+  }, []);
+
+  return moment;
 }
 
 const OVERRIDE_WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
