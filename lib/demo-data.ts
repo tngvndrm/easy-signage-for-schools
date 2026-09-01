@@ -4,6 +4,7 @@ import type {
   BoardMessage,
   EventItem,
   KeyDuty,
+  PiketRoster,
   SpecialOccasion,
   Substitution,
 } from "./types";
@@ -23,11 +24,38 @@ const demoTiming = {
 const noBlackout = { blackoutStartMin: null, blackoutEndMin: null };
 
 export const demoSettings: Record<string, ScreenSettings> = {
-  "1": { name: "Inkomhal", accent: "coral", darkStartMin: 18 * 60, lightStartMin: 8 * 60 + 30, ...noBlackout, ...demoTiming },
-  "2": { name: "Blok B", accent: "gold", darkStartMin: null, lightStartMin: null, ...noBlackout, ...demoTiming },
-  "3": { name: "Leraarskamer", accent: "blue", darkStartMin: null, lightStartMin: null, ...noBlackout, ...demoTiming },
+  "1": { name: "Inkomhal", accent: "coral", darkStartMin: 18 * 60, lightStartMin: 8 * 60 + 30, piket: false, ...noBlackout, ...demoTiming },
+  "2": { name: "Blok B", accent: "gold", darkStartMin: null, lightStartMin: null, piket: false, ...noBlackout, ...demoTiming },
+  // The staff room is the one screen the standby roster belongs on.
+  "3": { name: "Leraarskamer", accent: "blue", darkStartMin: null, lightStartMin: null, piket: true, ...noBlackout, ...demoTiming },
 };
 
+/**
+ * A demo roster in the shape the real one comes in: a named morning block above
+ * the numbered lesson hours, two or three names to call per slot, and a
+ * Wednesday that stops at midday.
+ */
+export const demoPiket: PiketRoster = {
+  title: "Piketrooster 2026-2027",
+  version: "25/08/2026",
+  dayLabels: ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag"],
+  blocks: [
+    { label: "PERIODE", periods: [1, 2], days: [
+      ["Anke", "Bram", "Cato"], ["Dries", "Eva", "Ferre"], ["Gitte", "Hugo", "Ines"], ["Joris", "Kaat", "Lars"], ["Mien", "Noor", "Otto"]] },
+    { label: "3e lesuur", periods: [3], days: [
+      ["Puck", "Rik", "Saar"], ["Tuur", "Wies", "Xander"], ["Yara", "Zeno", "Anke"], ["Bram", "Cato", "Dries"], ["Eva", "Ferre", "Gitte"]] },
+    { label: "4e lesuur", periods: [4], days: [
+      ["Hugo", "Ines", "Joris"], ["Kaat", "Lars", "Mien"], ["Noor", "Otto", "Puck / Rik"], ["Saar", "Tuur", "Wies"], ["Xander", "Yara", "Zeno"]] },
+    { label: "5e lesuur", periods: [5], days: [
+      ["Anke", "Dries", "Gitte"], ["Bram", "Eva", "Hugo"], [], ["Cato", "Ferre", "Ines"], ["Joris", "Kaat", "Lars"]] },
+    { label: "6e lesuur", periods: [6], days: [
+      ["Mien", "Noor", "Otto"], ["Puck", "Rik", "Saar"], [], ["Tuur", "Wies", "Xander"], ["Yara", "Zeno", "Anke"]] },
+    { label: "7e lesuur", periods: [7], days: [
+      ["Bram", "Cato", "Dries"], ["Eva", "Ferre", "Gitte"], [], ["Hugo", "Ines", "Joris"], ["Kaat", "Lars", "Mien"]] },
+    { label: "8e lesuur", periods: [8], days: [
+      ["Noor", "Otto"], ["Puck", "Rik"], [], ["Saar", "Tuur"], ["Wies"]] },
+  ],
+};
 /**
  * Stand-in for the Google Sheet + Firestore until they are wired up.
  * Modelled on the current slide deck so the layout is exercised realistically:

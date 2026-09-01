@@ -4,6 +4,7 @@ import {
   demoEvents,
   demoKeyDuties,
   demoMessages,
+  demoPiket,
   demoSettings,
   demoSpecialOccasion,
   demoSubstitutions,
@@ -14,6 +15,7 @@ import { BUILD, showBuildStamp } from "./build";
 import { readEvents } from "./events";
 import { readKeyDuties } from "./keys";
 import { readMessages } from "./messages";
+import { readPiket } from "./piket";
 import { readSchedule } from "./rooster";
 import { DEFAULT_SCHEDULE, type Slot } from "./schedule";
 import {
@@ -35,6 +37,7 @@ import type {
   BoardTiming,
   EventItem,
   KeyDuty,
+  PiketRoster,
   SpecialOccasion,
   Substitution,
 } from "./types";
@@ -104,6 +107,8 @@ export async function getBoardData(
     previewEvent?: boolean;
     /** Preview the special occasion board even when none is scheduled. */
     previewOccasion?: boolean;
+    /** Preview the standby roster on a screen whose Settings row is off. */
+    previewPiket?: boolean;
     /** Which screen (1/2/3) — selects its row in the Settings tab. */
     screenId?: string;
     /** Query overrides that beat the sheet: ?theme=, ?accent=. */
@@ -128,6 +133,7 @@ export async function getBoardData(
   let messages: BoardMessage[] = demoMessages;
   let settings: Record<string, ScreenSettings> = demoSettings;
   let schedule: Slot[] = DEFAULT_SCHEDULE;
+  let piket: PiketRoster | null = demoPiket;
   let style: BrandStyle = EMPTY_STYLE;
   let substitutionsUnavailable = false;
   let specialOccasions: SpecialOccasion[] = [];
@@ -136,7 +142,7 @@ export async function getBoardData(
   const demo = !isSheetConfigured();
 
   if (!demo) {
-    const [subs, duties, evts, bdays, msgs, sets, sched, sty, occasions] =
+    const [subs, duties, evts, bdays, msgs, sets, sched, sty, occasions, pik] =
       await Promise.allSettled([
         readSubstitutions(date),
         readKeyDuties(date),
@@ -147,6 +153,7 @@ export async function getBoardData(
         readSchedule(),
         readStyle(),
         readSpecialOccasions(date, nowMinutes),
+        readPiket(),
       ]);
 
     if (subs.status === "fulfilled") {
@@ -202,6 +209,14 @@ export async function getBoardData(
     style = sty.status === "fulfilled" ? sty.value : EMPTY_STYLE;
     if (sty.status === "rejected") {
       console.error("[board] style sheet read failed", sty.reason);
+    }
+
+    // No Piket tab, or a failed read, simply leaves the panel out of the
+    // rotation: it is standing reference, and an empty grid on the wall would
+    // say less than the substitution board it displaced.
+    piket = pik.status === "fulfilled" ? pik.value : null;
+    if (pik.status === "rejected") {
+      console.error("[board] piket sheet read failed", pik.reason);
     }
 
     if (occasions.status === "fulfilled") {
@@ -280,6 +295,8 @@ export async function getBoardData(
     style,
     substitutions,
     schedule,
+    // Only where the Settings row asks for it — the staff room, not a corridor.
+    piket: set.piket || options.previewPiket ? piket : null,
     messages: rotation,
     birthdays,
     keys,

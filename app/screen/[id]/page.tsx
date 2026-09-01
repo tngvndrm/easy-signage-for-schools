@@ -34,6 +34,7 @@ export default async function ScreenPage({
     previewTakeover: query.takeover === "1",
     previewEvent: query.event === "1",
     previewOccasion: query.occasion === "1",
+    previewPiket: query.piket === "1",
     date:
       dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined,
     keyLimit: Number.isFinite(keyLimit) ? keyLimit : undefined,
@@ -59,6 +60,7 @@ export default async function ScreenPage({
         // ?keypanel=1 pins the key panel on, rather than waiting out its cycle.
         forceKeyPanel={query.keypanel === "1"}
         forceEvent={query.event === "1"}
+        forcePiket={query.piket === "1"}
       />
       {/*
        * Fixed-position, and a sibling of the board rather than part of it, so it
