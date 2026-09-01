@@ -505,7 +505,7 @@ dormant and the rest of the board is unaffected. The header rows:
 
 | Tab | Header |
 | --- | --- |
-| `Vervangingen` | `Datum · Lesuur · Klas · Afwezige Leerkracht · Vervanging · Inhoud · Lokaal` |
+| `Vervangingen` | `Weekdag · Datum · Lesuur · Klas · Afwezige Leerkracht · Vervanging · Inhoud · Lokaal` |
 | `Mededelingen` | `Titel · Tekst · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · Afbeelding · Volledig beeld · Big Slide` |
 | `Evenementen` | `Datum · Tijd · Toon vanaf · Klas · Titel · Synopsis · Poster` |
 | `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
@@ -541,6 +541,7 @@ rather than taking the defaults, widen them there too:
 
 | | Was | Now |
 | --- | --- | --- |
+| `SHEET_RANGE` | `Vervangingen!A1:H400` | `Vervangingen!A1:J400` |
 | `MESSAGES_SHEET_RANGE` | `Mededelingen!A1:H200` | `Mededelingen!A1:J200` |
 | `SPECIAL_OCCASIONS_RANGE` | `Speciale Gelegenheden!A1:K400` | `Speciale Gelegenheden!A1:M400` |
 
@@ -571,6 +572,14 @@ uniform:
 ### Substitution specifics (`Vervangingen`)
 
 - Only rows whose `Datum` is today are shown, sorted by period.
+- `Weekdag` is a column for the people editing the sheet, not for the board: it's
+  ignored on reading, like any other unknown column. Leave it computed rather
+  than typed — in a Dutch-language sheet
+  `=ALS(B2="";"";TEKST(B2;"dddd"))` beside a `Datum` in `B`, or
+  `=IF(B2="","",TEXT(B2,"dddd"))` in an English one — so it can never disagree
+  with the date next to it. It needs `Datum` to hold a real date rather than
+  text that looks like one; a column that shows `#WAARDE!` for every row means
+  the dates were typed as text (Opmaak → Getal → Datum, then retype one).
 - `1-2`, `1 & 2`, `1 en 2` all render as **1 & 2**, marked live through both.
 - A blank `Lesuur` or `Datum` inherits the row above, so merged cells keep
   working — filling every row is still recommended.
