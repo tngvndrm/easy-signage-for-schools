@@ -16,7 +16,7 @@ const KEY_FILE = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "./service-accoun
 const SHEET_ID = process.env.SHEET_ID ?? "";
 // Defaults mirror lib/*.ts, so this checks the same ranges the board reads.
 const RANGES = {
-  Vervangingen: process.env.SHEET_RANGE ?? "Vervangingen!A1:H400",
+  Vervangingen: process.env.SHEET_RANGE ?? "Vervangingen!A1:J400",
   Sleutels: process.env.KEYS_SHEET_RANGE ?? "Sleutels!A1:H200",
 };
 

@@ -6,7 +6,10 @@ import {
 } from "./sheets";
 import type { Substitution } from "./types";
 
-const SHEET_RANGE = process.env.SHEET_RANGE ?? "Vervangingen!A1:H400";
+// Wider than the seven columns the board reads: staff keep helper columns
+// beside them (a `Weekdag` that computes the day from `Datum`, say), and a
+// range that stops at the last read column would cut `Inhoud` off the end.
+const SHEET_RANGE = process.env.SHEET_RANGE ?? "Vervangingen!A1:J400";
 
 /**
  * Header names we accept. Keeping several aliases per column means staff can
