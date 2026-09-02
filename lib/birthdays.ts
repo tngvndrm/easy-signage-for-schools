@@ -44,23 +44,32 @@ export async function readBirthdays(today: string): Promise<Birthday[]> {
   const todayMonthDay = today.slice(5); // "mm-dd"
   const out: Birthday[] = [];
 
-  for (const row of rows.slice(header.firstDataRow)) {
+  for (const [index, row] of rows.slice(header.firstDataRow).entries()) {
     const cell = (i: number) => (i >= 0 ? (row[i] ?? "").trim() : "");
 
     const iso = normalizeDate(cell(columns.datum));
     if (!iso || iso.slice(5) !== todayMonthDay) continue;
 
+    const klas = cell(columns.klas);
     const name = [cell(columns.voornaam), cell(columns.naam)]
       .filter(Boolean)
       .join(" ");
-    if (!name) continue;
+    // Neither is an empty row. A class on its own is a real birthday read by a
+    // deployment whose range stops short of the name columns — see
+    // lib/privacy.ts — and the card counts those instead of naming them.
+    if (!name && !klas) continue;
 
     out.push({
-      id: `${iso.slice(5)}-${name}`,
+      // Never built from the name: ids travel in the payload, so a name in one
+      // would outlive the redaction that empties the field. The row index keeps
+      // two classmates with the same birthday apart.
+      id: `${iso.slice(5)}-${klas}-${index}`,
       name,
-      klas: cell(columns.klas),
+      klas,
     });
   }
 
-  return out.sort((a, b) => a.name.localeCompare(b.name));
+  return out.sort(
+    (a, b) => a.name.localeCompare(b.name) || a.klas.localeCompare(b.klas),
+  );
 }

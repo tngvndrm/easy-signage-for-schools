@@ -18,6 +18,12 @@ export function BirthdayZone({
 }) {
   if (birthdays.length === 0) return null;
 
+  // Read from the data, not from a prop: the names are gone either because the
+  // deployment redacted them (PUPIL_DATA=reduced) or because its sheet range
+  // never asked for them. Both mean the same thing on screen, and inferring it
+  // here keeps the two enforcement layers from needing to agree on a flag.
+  const anonymous = birthdays.every((birthday) => !birthday.name);
+
   return (
     // The transparent border matches the message card's, so both cards' content
     // boxes start at the same y and their labels sit on one line.
@@ -30,18 +36,31 @@ export function BirthdayZone({
         Jarig vandaag
         <BirthdayGlyph className="h-[1.7rem] w-[1.7rem] shrink-0 text-white" />
       </div>
-      <ul className="relative flex min-h-0 flex-1 flex-col justify-center">
-        {birthdays.map((birthday) => (
-          <li key={birthday.id} className="leading-tight">
-            <span className="font-display text-[1.55rem] font-bold text-white">
-              {birthday.name}
-            </span>
-            <span className="pl-[0.5rem] text-[1.1rem] text-white/80">
-              {birthday.klas}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {anonymous ? (
+        // No names to show, so the count carries the card: the corridor learns
+        // there is something to celebrate, and the classes say where.
+        <div className="relative flex min-h-0 flex-1 flex-col justify-center leading-tight">
+          <p className="font-display text-[1.55rem] font-bold text-white">
+            {birthdays.length} {birthdays.length === 1 ? "jarige" : "jarigen"}
+          </p>
+          <p className="text-[1.1rem] text-white/80">
+            {birthdays.map((birthday) => birthday.klas).filter(Boolean).join(" · ")}
+          </p>
+        </div>
+      ) : (
+        <ul className="relative flex min-h-0 flex-1 flex-col justify-center">
+          {birthdays.map((birthday) => (
+            <li key={birthday.id} className="leading-tight">
+              <span className="font-display text-[1.55rem] font-bold text-white">
+                {birthday.name}
+              </span>
+              <span className="pl-[0.5rem] text-[1.1rem] text-white/80">
+                {birthday.klas}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

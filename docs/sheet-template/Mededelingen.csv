@@ -1,6 +1,6 @@
-Titel,Tekst,Weergave Startdatum,Weergave Startuur,Weergave Einddatum,Weergave Einduur,Afbeelding,Volledig beeld,Big Slide
-Afhalen,"Lotte (7A) en Sam (8C) — kom naar het secretariaat.",,,,,,FALSE,No
-Wafelverkoop 6A,"Steun de bosklassen — vrijdag aan de schoolpoort, €1 per wafel.",01/09/2026,,05/09/2026,,https://drive.google.com/file/d/VOORBEELD_ID/view,TRUE,No
-Oudercontact vanavond,"Onthaal in de hal vanaf 17u.",04/09/2026,17:00,04/09/2026,20:30,,,No
-Toneel Klas 8,"Vrijdag en zaterdag: Toneel Klas 8A in de zaal.",,,,,https://drive.google.com/file/d/VOORBEELD_ID/view,TRUE,Yes
-Fijn verlof!,"We zien elkaar terug op maandag 1 september.",04/07/2026,,31/08/2026,,,,Permanent
+Titel,Tekst,Weergave Startdatum,Weergave Startuur,Weergave Einddatum,Weergave Einduur,Afbeelding,Volledig beeld,Big Slide,Enkel op bord
+Afhalen,"Lotte (7A) en Sam (8C) — kom naar het secretariaat.",,,,,,FALSE,No,Yes
+Wafelverkoop 6A,"Steun de bosklassen — vrijdag aan de schoolpoort, €1 per wafel.",01/09/2026,,05/09/2026,,https://drive.google.com/file/d/VOORBEELD_ID/view,TRUE,No,
+Oudercontact vanavond,"Onthaal in de hal vanaf 17u.",04/09/2026,17:00,04/09/2026,20:30,,,No,
+Toneel Klas 8,"Vrijdag en zaterdag: Toneel Klas 8A in de zaal.",,,,,https://drive.google.com/file/d/VOORBEELD_ID/view,TRUE,Yes,
+Fijn verlof!,"We zien elkaar terug op maandag 1 september.",04/07/2026,,31/08/2026,,,,Permanent,

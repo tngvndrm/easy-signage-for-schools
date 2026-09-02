@@ -16,7 +16,7 @@ database or login to build or run.
 | Styling | **Tailwind CSS v4 + Steinerschool Gent tokens** | Brand colours, Averia typeface and the organic radii live as CSS variables in `app/globals.css`. |
 | Data | **Google Sheets API v4** (read-only, service account) | One sheet, one tab per feature. Staff edit a sheet they already know; nothing to run. |
 | Images | **Google Drive links** | Posters/artwork are Drive share links, rewritten to direct images by the reader. No upload pipeline. |
-| Hosting | **On the school LAN** (Next standalone — on a Pi/Mac/Windows server, or on the display Pi itself) | Student names never leave the building. See [`docs/install.md`](docs/install.md). |
+| Hosting | **On the school LAN** for the screens, optionally **Cloud Run** for reading from home | Two independent deployments of one codebase, neither needing the other. The corridor never depends on the internet line; the cloud instance runs behind a school login and with pupil names stripped. See [`docs/deploy-lan.md`](docs/deploy-lan.md) and [`docs/deploy-cloud.md`](docs/deploy-cloud.md). |
 | Screens | **Raspberry Pi + cage** kiosk | Pi OS Lite boots straight into one full-screen Chromium. No desktop. |
 
 Deliberately *not* used: no state manager, no component library, no CMS, no
@@ -270,12 +270,12 @@ The rotating notices — pickup calls, reminders, fundraiser posters — come fr
 the `Mededelingen` tab. Each has an optional show-window, so an item puts itself
 up and takes itself down instead of someone remembering to delete it.
 
-| Titel | Tekst | Weergave Startdatum | Weergave Startuur | Weergave Einddatum | Weergave Einduur | Afbeelding | Volledig beeld | Big Slide |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Afhalen | Lotte (7A) … | | | | | | FALSE | No |
-| Wafelverkoop 6A | Steun de bosklassen … | 01/09/2026 | | 05/09/2026 | | *(Drive link)* | TRUE | No |
-| Oudercontact | Onthaal in de hal. | 05/09/2026 | 17:00 | 05/09/2026 | 20:30 | | | No |
-| Fijn verlof! | We zien elkaar terug op 1 september. | 04/07 | | 31/08 | | | | Permanent |
+| Titel | Tekst | Weergave Startdatum | Weergave Startuur | Weergave Einddatum | Weergave Einduur | Afbeelding | Volledig beeld | Big Slide | Enkel op bord |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Afhalen | Lotte (7A) … | | | | | | FALSE | No | Yes |
+| Wafelverkoop 6A | Steun de bosklassen … | 01/09/2026 | | 05/09/2026 | | *(Drive link)* | TRUE | No | |
+| Oudercontact | Onthaal in de hal. | 05/09/2026 | 17:00 | 05/09/2026 | 20:30 | | | No | |
+| Fijn verlof! | We zien elkaar terug op 1 september. | 04/07 | | 31/08 | | | | Permanent | |
 
 - **Weergave Startdatum / Einddatum** are optional. Blank start = from now;
   blank end = until removed; neither = always shown. Same forgiving date formats
@@ -308,6 +308,12 @@ up and takes itself down instead of someone remembering to delete it.
     special occasion, which holds the screen the same way.
   (Reads `Yes`/`Ja` and `Permanent`/`Vast` loosely; a data-validation dropdown
   keeps it tidy.)
+- **Enkel op bord** is a tickbox that keeps the notice off any deployment
+  running `PUPIL_DATA=reduced` — the one read from outside the building. A
+  notice is free text, so no filter can tell whether "Lotte (7A) mag haar jas
+  ophalen" names a pupil; this is where staff say so themselves. Blank means the
+  notice travels everywhere, which is the right default for the great majority
+  of them. See [Pupil data](#pupil-data).
 
 Keep card text short: a card clamps an over-long body with an ellipsis. Long
 content belongs on a Big Slide, where a text-only slide left-aligns past a
@@ -457,6 +463,41 @@ never strip it), so it isn't something a live sheet value can do. Swap it by
 editing the one `next/font` import in `app/layout.tsx` and rebuilding — the point
 where a sister school forks and deploys anyway.
 
+### Pupil data
+
+The board names pupils in two places — who is having a birthday, and who still
+owes a classroom key. In a corridor inside the school that is the whole point.
+On a deployment read from outside the building it is the thing to be careful
+with, and a school that would rather not put pupils on the wall at all should be
+able to say so without forking anything.
+
+One setting, per deployment:
+
+| `PUPIL_DATA` | What the board shows |
+| --- | --- |
+| `full` (default) | `Lina Peeters 3A` on the birthday card, `3A · Mats` on a key chip. As the corridor board has always run. |
+| `reduced` | `3 jarigen` and their classes; key chips carrying only the class; notices ticked **Enkel op bord** left out. |
+
+It is a property of the deployment, not of the request — there is deliberately
+no `?pupildata=` to flip, so no URL can talk a reduced instance into handing the
+names over. It is also independent of *where* the instance runs: a school with
+no corridor screens, whose staff only read from home, may perfectly well want
+`full`. "Who may look" and "what they may see" are separate questions, and the
+one thing this setting must never do is quietly answer both.
+
+The reduction happens **server-side**, in `lib/privacy.ts`, before the payload
+leaves the process. A zone that merely hid the names in the markup would still
+have shipped them to a browser, where any reader can open the network tab.
+
+Stronger still, and worth doing on any instance published outside the school:
+narrow that deployment's sheet ranges so the names are never fetched at all —
+`BIRTHDAYS_SHEET_RANGE=Verjaardagen!C1:F1000` returns the class and the date
+and nothing else. Then there is nothing to filter, because nothing arrived. The
+readers handle it: a birthday row with a class and no name still counts, and a
+key chip without a name still says which class to chase. Details, including the
+one column a school has to move for the same trick on `Sleutels`, are in
+[`docs/deploy-cloud.md`](docs/deploy-cloud.md).
+
 ### Per-screen settings
 
 A `Settings` tab lets staff retune each screen live — no code, no redeploy. One
@@ -597,7 +638,7 @@ dormant and the rest of the board is unaffected. The header rows:
 | Tab | Header |
 | --- | --- |
 | `Vervangingen` | `Datum · Lesuur · Klas · Afwezige Leerkracht · Vervanging · Inhoud · Lokaal` |
-| `Mededelingen` | `Titel · Tekst · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · Afbeelding · Volledig beeld · Big Slide` |
+| `Mededelingen` | `Titel · Tekst · Weergave Startdatum · Weergave Startuur · Weergave Einddatum · Weergave Einduur · Afbeelding · Volledig beeld · Big Slide · Enkel op bord` |
 | `Evenementen` | `Datum · Tijd · Toon vanaf · Klas · Titel · Synopsis · Poster` |
 | `Sleutels` | `Klas · Leerling · Ophalen · Opgehaald · Terugbrengen · Teruggebracht` |
 | `Verjaardagen` | `Voornaam · Naam · Klas · Datum` |
@@ -633,7 +674,7 @@ rather than taking the defaults, widen them there too:
 
 | | Was | Now |
 | --- | --- | --- |
-| `MESSAGES_SHEET_RANGE` | `Mededelingen!A1:H200` | `Mededelingen!A1:J200` |
+| `MESSAGES_SHEET_RANGE` | `Mededelingen!A1:J200` | `Mededelingen!A1:K200` |
 | `SPECIAL_OCCASIONS_RANGE` | `Speciale Gelegenheden!A1:K400` | `Speciale Gelegenheden!A1:M400` |
 
 The same trap bit the `Settings` tab earlier: it's eleven columns wide now, so a
@@ -677,12 +718,30 @@ uniform:
 
 ## Deploying
 
-Everything stays on the school LAN — nothing is exposed to the internet. Two
-setups are supported: **standalone** (the display Pi runs the server itself)
-and **server–client** (one server — a Pi, Mac or Windows machine — feeding
-every display Pi). The full install guide, covering both modes plus the cage
-kiosk setup and per-section troubleshooting, is
-**[`docs/install.md`](docs/install.md)**.
+There are two halves, and they are independent deployments of this one
+codebase. Run either on its own, or both:
+
+| | Serves | Guide |
+| --- | --- | --- |
+| **LAN** | the corridor screens, on the school network | [`docs/deploy-lan.md`](docs/deploy-lan.md) |
+| **Cloud** | staff reading from home, behind a school login | [`docs/deploy-cloud.md`](docs/deploy-cloud.md) |
+
+They read the same sheet and know nothing of each other. A school with no
+corridor screens sets up no LAN host; a school that doesn't read from home
+deploys no cloud instance — and its CI never even runs the deploy job, which is
+skipped until the GCP repository variables exist.
+
+Keeping them separate rather than proxying one through the other is what keeps
+**the corridor independent of the school's internet line**: the screens never
+touch the internet-facing service. It also makes the privacy question a setting
+per deployment instead of a rule per request — see
+[Pupil data](#pupil-data).
+
+**LAN.** Two setups are supported: **standalone** (the display Pi runs the
+server itself) and **server–client** (one server — a Pi, Mac or Windows machine
+— feeding every display Pi). The full install guide, covering both modes plus
+the cage kiosk setup and per-section troubleshooting, is
+**[`docs/deploy-lan.md`](docs/deploy-lan.md)**.
 
 The screens must load the **production** build (`./scripts/build-standalone.sh`
 or `npm run start`), never `npm run dev` — dev-mode hydration doesn't run
@@ -691,6 +750,14 @@ reliably in the Pi's Chromium.
 If the host has to be a Windows Server rather than a Pi, the same setup
 translated — service wrapper, port 80, and the `.local` name that stops
 working — is in **[`docs/deploy-windows.md`](docs/deploy-windows.md)**.
+
+**Cloud.** A container on Cloud Run in `europe-west1`, behind Identity-Aware
+Proxy so only school accounts reach it, reading the same sheet as its own
+service account — no key file exists on that side at all. `main` deploys itself
+once the repository variables are set. Project setup, the privacy settings that
+belong on an instance read from outside the building, and the troubleshooting
+that differs from the LAN host are in
+**[`docs/deploy-cloud.md`](docs/deploy-cloud.md)**.
 
 ## Not built yet
 

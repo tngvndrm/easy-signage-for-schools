@@ -1,0 +1,18 @@
+# Keep the build context to what `next build` actually reads.
+node_modules
+.next
+.git
+.github
+
+# Never bake a developer's local config into an image: Next reads .env.local at
+# build *and* run time, where it would quietly outrank the Cloud Run settings.
+.env
+.env.*
+service-account.json
+
+# The other deployment's furniture, and prose.
+deploy
+docs
+pi
+scripts
+*.md

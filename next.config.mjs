@@ -18,8 +18,12 @@ function buildStamp() {
     // host, where a build should only ever follow a clean `git pull`.
     commit = git("rev-parse --short HEAD") + (git("status --porcelain") ? "*" : "");
   } catch {
-    // Not a git checkout (a copied tree, or a tarball) — the timestamp below
+    // Not a git checkout: a copied tree, a tarball, or the container build,
+    // whose context leaves .git out on purpose. The cloud deploy passes the
+    // commit in as GIT_SHA instead; without even that, the timestamp below
     // still tells one build from the next, which is most of the value.
+    const sha = (process.env.GIT_SHA ?? "").trim();
+    if (sha) commit = sha.slice(0, 7);
   }
 
   const now = new Date();
@@ -35,6 +39,12 @@ function buildStamp() {
 const nextConfig = {
   // Cloud Run: ship a minimal server bundle instead of the whole node_modules tree.
   output: "standalone",
+  // Pin the workspace root. Left to infer it, Next picks the directory of the
+  // first package-lock.json it finds walking up — so a checkout that sits
+  // inside another project (a git worktree, say) builds its standalone server
+  // into a nested path, and both scripts/build-standalone.sh and the
+  // Dockerfile then copy a directory that holds nothing.
+  turbopack: { root: import.meta.dirname },
   // The dev badge sits exactly where the message zone is — hide it so what you
   // see locally is what the kiosk shows.
   devIndicators: false,
