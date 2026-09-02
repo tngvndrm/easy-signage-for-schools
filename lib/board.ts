@@ -24,6 +24,7 @@ import {
   type ScreenSettings,
   themeAt,
 } from "./settings";
+import { PUPIL_DATA, redact } from "./privacy";
 import { isSheetConfigured } from "./sheets";
 import { EMPTY_STYLE, readStyle, type BrandStyle } from "./style";
 import { readSpecialOccasions } from "./specialOccasions";
@@ -280,7 +281,10 @@ export async function getBoardData(
     permanentSlides = [demoBigSlidePreview];
   }
 
-  return {
+  // One choke point for the privacy profile, after the demo branch so a demo
+  // board reduces the same way a real one does — a preview that shows more than
+  // the deployment will is worse than no preview.
+  return redact({
     date,
     dateLabel: label,
     appearance: { theme, accent },
@@ -311,5 +315,6 @@ export async function getBoardData(
     buildStampVisible: showBuildStamp(options.buildStampOverride),
     demo,
     substitutionsUnavailable,
-  };
+    pupilData: PUPIL_DATA,
+  });
 }

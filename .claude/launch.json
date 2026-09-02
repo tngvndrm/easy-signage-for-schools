@@ -4,8 +4,20 @@
     {
       "name": "signage-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "signage-dev-reduced",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "PUPIL_DATA=reduced PORT=3001 npm run start"
+      ],
+      "port": 3001
     }
   ]
 }

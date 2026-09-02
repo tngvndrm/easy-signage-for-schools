@@ -23,7 +23,7 @@ function parseBigSlide(raw: string): "periodic" | "permanent" | undefined {
   return undefined;
 }
 
-const MESSAGES_RANGE = process.env.MESSAGES_SHEET_RANGE ?? "Mededelingen!A1:J200";
+const MESSAGES_RANGE = process.env.MESSAGES_SHEET_RANGE ?? "Mededelingen!A1:K200";
 
 /**
  * The rotating notices — pickup calls, reminders, fundraiser posters. Each has
@@ -67,6 +67,17 @@ const COLUMNS = {
   afbeelding: ["afbeelding", "beeld", "artwork", "image", "poster"],
   cover: ["volledigbeeld", "volledig", "cover", "fullbleed", "grootbeeld"],
   bigSlide: ["bigslide", "grootscherm", "volledigscherm", "takeover", "overname"],
+  // "Enkel op bord": keep this notice off a deployment that runs `reduced`.
+  // Free text can name a pupil and no filter can see that, so this is where
+  // staff say so themselves. Blank means "show everywhere".
+  boardOnly: [
+    "enkelopbord",
+    "alleenopbord",
+    "enkelbord",
+    "nietthuis",
+    "bordonly",
+    "boardonly",
+  ],
 };
 
 /**
@@ -128,6 +139,7 @@ export async function readMessages(
       // Full-bleed only makes sense with an image behind the text.
       cover: !!imageUrl && isTicked(cell(columns.cover)),
       ...(bigSlide ? { bigSlide } : {}),
+      ...(isTicked(cell(columns.boardOnly)) ? { boardOnly: true } : {}),
     });
   }
 

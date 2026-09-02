@@ -1,6 +1,6 @@
 # Deploying on a Windows Server host
 
-The same architecture as Mode B in [`install.md`](install.md) — one box on the
+The same architecture as Mode B in [`deploy-lan.md`](deploy-lan.md) — one box on the
 school network serves all three screens, nothing is exposed to the internet —
 with a Windows Server host instead of a Pi. Only the host talks to Google; the
 screens only ever talk to the host.
@@ -104,7 +104,7 @@ There is no `EnvironmentFile=` here, so the file is loaded by Node itself with
 differently. The defaults live in the code and widen as features add columns;
 a range pinned in `.env.local` does not, and a range that stops short of a new
 column turns that feature off silently — see
-[Why a feature stopped showing](install.md#why-a-feature-stopped-showing).
+[Why a feature stopped showing](deploy-lan.md#why-a-feature-stopped-showing).
 
 Verify the Sheets wiring before going further; it names the exact next step for
 whatever isn't done yet, and prints the service-account address to share the
@@ -248,7 +248,7 @@ logs and `Get-Service`.
 
 ## 7. Point each screen at it
 
-The display Pis are set up exactly as in Part 2 of [`install.md`](install.md)
+The display Pis are set up exactly as in Part 2 of [`deploy-lan.md`](deploy-lan.md)
 (cage + Chromium), with one change: **`infobord.local` will not resolve.** That name came from
 Avahi advertising the Pi host over mDNS, and Windows Server doesn't publish
 itself that way. Use the school DNS name or the static IP:
@@ -292,5 +292,5 @@ need to touch the display Pis.
   hydration doesn't run reliably in the Pi's Chromium, so the clock sticks at
   `--:--` and the board never polls. Serve the standalone build.
 
-Everything in the failure table at the end of [`install.md`](install.md)
+Everything in the failure table at the end of [`deploy-lan.md`](deploy-lan.md)
 applies unchanged — the screens' resilience doesn't care what the host runs.

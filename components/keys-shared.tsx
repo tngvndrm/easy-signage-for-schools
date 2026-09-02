@@ -61,11 +61,15 @@ export function KeyChip({
       >
         {duty.klas}
       </span>
-      <span
-        className={`truncate ${compact ? "text-[0.95rem]" : "text-[1.15rem]"}`}
-      >
-        {duty.student}
-      </span>
+      {/* Empty on a reduced deployment — the class alone still finds the pupil,
+          and an empty span would leave a gap where the name was. */}
+      {duty.student && (
+        <span
+          className={`truncate ${compact ? "text-[0.95rem]" : "text-[1.15rem]"}`}
+        >
+          {duty.student}
+        </span>
+      )}
       {duty.overdue && (
         <span
           className={`ml-auto shrink-0 font-mono uppercase tracking-[0.08em] text-alert ${

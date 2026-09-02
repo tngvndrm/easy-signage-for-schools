@@ -1,6 +1,6 @@
 [Unit]
 Description=Infoborden signage server
-Documentation=file:///opt/infoborden/docs/install.md
+Documentation=file:///opt/infoborden/docs/deploy-lan.md
 After=network-online.target
 Wants=network-online.target
 

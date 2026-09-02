@@ -1,5 +1,6 @@
 /** Shape of everything the board needs, in one payload. */
 
+import type { PupilData } from "./privacy";
 import type { Slot } from "./schedule";
 import type { BrandStyle } from "./style";
 
@@ -41,10 +42,18 @@ export type BoardMessage = {
   bigSlide?: "periodic" | "permanent";
   /** Seconds this item stays on screen in the rotation. */
   durationSec?: number;
+  /**
+   * Keep this notice off deployments that run `reduced` — the "Enkel op bord"
+   * tick. A notice is free text, so nothing here can tell whether it names a
+   * pupil; this is how staff say so themselves.
+   */
+  boardOnly?: boolean;
 };
 
 export type Birthday = {
+  /** Stable React key. Never built from the name — see lib/privacy.ts. */
   id: string;
+  /** Empty on a `reduced` deployment, where the card counts classes instead. */
   name: string;
   klas: string;
 };
@@ -52,6 +61,7 @@ export type Birthday = {
 export type KeyDuty = {
   id: string;
   klas: string;
+  /** Empty on a `reduced` deployment; the class alone still finds the pupil. */
   student: string;
   /** Collecting the key for the weekend, or bringing it back. */
   action: "pickup" | "return";
@@ -180,6 +190,12 @@ export type BoardData = {
   buildStampVisible: boolean;
   /** True when the payload came from mock data, not a real Sheet. */
   demo: boolean;
+  /**
+   * How much pupil data this deployment shows. Travels with the payload so the
+   * zones can pick their reduced rendering, and so it's visible to anyone
+   * inspecting what the server actually sent. See lib/privacy.ts.
+   */
+  pupilData: PupilData;
   /**
    * The substitution sheet couldn't be read. Distinct from "no substitutions
    * today" — an empty board must never be able to mean a broken one.

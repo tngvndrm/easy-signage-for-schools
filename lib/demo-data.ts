@@ -77,6 +77,9 @@ export const demoMessages: BoardMessage[] = [
     id: "pickup",
     title: "Afhalen aan het secretariaat",
     body: "Lotte Verbeeck (7A), Sam De Ridder (8C) en Nour El Amrani (9B) — kom je even naar het secretariaat?",
+    // The one notice here that names pupils, ticked the way staff would tick it
+    // in the sheet — so a reduced deployment demonstrates the filter too.
+    boardOnly: true,
   },
   {
     id: "reminder",

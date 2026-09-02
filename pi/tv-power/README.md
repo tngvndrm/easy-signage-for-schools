@@ -229,6 +229,6 @@ light but not the standby wattage.
 | Everything off at odd hours | `sudo infoborden-tv-power status` and check `schedule source` — it should say `local file`; the always-on `fallback` means the schedule file is missing or invalid |
 | `cec-client` hangs | Another process holds the adapter; `sudo systemctl stop infoborden-tv-power.timer` while testing by hand |
 
-If you also run a nightly auto-reboot (see `docs/install.md`, Part 2.3), schedule it
+If you also run a nightly auto-reboot (see `docs/deploy-lan.md`, Part 2.3), schedule it
 *inside* the off window — a reboot re-runs the agent 45s after boot and it will
 re-apply whatever the schedule says.
