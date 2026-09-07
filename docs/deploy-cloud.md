@@ -15,6 +15,13 @@ home needs nothing here. Nothing below is a prerequisite for the corridor
 screens, and the screens never touch this service: **the hallway stays up when
 the school's internet line doesn't.**
 
+Staff reading from home are mostly on a phone, so the board reflows for one: on
+a phone-sized screen the same `/screen/N` URL drops the wall's landscape layout
+and its timed full-screen rotation for a single column you scroll — today's
+substitutions first, then the notices, keys, standby roster and birthdays. The
+corridor screens are unaffected; the switch is on viewport size alone, so only a
+phone ever sees it. Nothing new to deploy — it ships with the same image.
+
 Everything runs in `europe-west1` (St. Ghislain) below, so the data stays in
 Belgium and the only processor involved is the one already holding the Sheet.
 
