@@ -94,7 +94,7 @@ later ship an image and nothing else.
 Cloud Build build this repo's Dockerfile inside your project:
 
 ```bash
-gcloud run deploy infobord --source . --region europe-west1 --service-account infobord-run@PROJECT_ID.iam.gserviceaccount.com --set-env-vars SHEET_ID=YOUR_SHEET_ID,TIMEZONE=Europe/Brussels,LOCALE=nl-BE,PUPIL_DATA=reduced --min-instances 0 --max-instances 2 --memory 512Mi
+gcloud run deploy infobord --source . --region europe-west1 --service-account infobord-run@PROJECT_ID.iam.gserviceaccount.com --set-env-vars SHEET_ID=YOUR_SHEET_ID,TIMEZONE=Europe/Brussels,LOCALE=nl-BE,PUPIL_DATA=reduced,STANDBY=off --min-instances 0 --max-instances 2 --memory 512Mi
 ```
 
 `--source` has no way to pass a build argument, so this one image reports its
@@ -125,8 +125,14 @@ in place of `--source .`.
 Notes on those flags:
 
 - **`TIMEZONE` is not optional here.** The container's clock is UTC, and every
-  "now" on the board — the lesson marker, the show-windows, the standby hours —
-  is computed against this value.
+  "now" on the board — the lesson marker, the show-windows — is computed against
+  this value.
+- **`STANDBY=off`** stops this instance ever showing the black night screen.
+  Standby stands in for cutting a wall TV's power after hours; nothing here is a
+  TV, so a night screen would only hide the board from someone who opened it in
+  the evening. Like `PUPIL_DATA`, it's a deployment-wide property — the shared
+  sheet can still carry standby hours for the corridor screens, and this
+  instance simply ignores them. See section 5.
 - **`--max-instances 2`** keeps the Sheets read quota (60 per minute per service
   account) out of reach no matter what happens.
 - **`--min-instances 0`** is deliberate: the free tier covers this deployment
@@ -306,8 +312,10 @@ what the page shows:
 curl -s https://YOUR_SERVICE_URL/api/board | head -c 2000
 ```
 
-**The board goes black at home in the evening.** That's the standby window doing
-its job; the screen wakes on pointer movement, or append `?blackout=0`.
+**The board goes black at home in the evening.** This instance is still reading
+the corridor's standby hours — set `STANDBY=off` on it (section 4) so it never
+sleeps. Until the deploy that carries it lands, the screen wakes on pointer
+movement, or append `?blackout=0`.
 
 **A 403 after enabling IAP.** The account isn't in the group, or the group
 hasn't been granted IAP-secured Web App User. Both are in step 6.

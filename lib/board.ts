@@ -25,6 +25,7 @@ import {
   themeAt,
 } from "./settings";
 import { PUPIL_DATA, redact } from "./privacy";
+import { STANDBY_ENABLED } from "./standby";
 import { isSheetConfigured } from "./sheets";
 import { EMPTY_STYLE, readStyle, type BrandStyle } from "./style";
 import { readSpecialOccasions } from "./specialOccasions";
@@ -243,9 +244,14 @@ export async function getBoardData(
   }
 
   // Standby hours. Both ends are needed to describe a window, so one filled on
-  // its own leaves the screen awake rather than guessing at the other.
+  // its own leaves the screen awake rather than guessing at the other. A
+  // deployment that runs no TVs (STANDBY=off — the cloud half) never blacks out
+  // at all, whatever hours the shared sheet carries for the wall. See
+  // lib/standby.ts.
   const blackout: BlackoutWindow | null =
-    set.blackoutStartMin !== null && set.blackoutEndMin !== null
+    STANDBY_ENABLED &&
+    set.blackoutStartMin !== null &&
+    set.blackoutEndMin !== null
       ? {
           startMin: set.blackoutStartMin,
           endMin: set.blackoutEndMin,
