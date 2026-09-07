@@ -141,6 +141,24 @@ body {
 }
 
 /*
+ * Phone layout (see components/MobileBoard.tsx and useIsMobile.ts — keep this
+ * query in step with MOBILE_MEDIA_QUERY there). The board sizes everything off
+ * the viewport height, which a portrait phone doesn't have; here the root em is
+ * a fixed, legible size instead, and the page scrolls down its column rather
+ * than being pinned to one landscape screen.
+ */
+@media (max-width: 640px), (max-height: 480px) {
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
+
+/*
  * Kiosk: no accidental text selection from a stray touch, and no cursor parked
  * in the middle of the board. The pointer is hidden only while it sits still,
  * so a Pi with no mouse never shows one, while a teacher visiting the page on a

@@ -13,12 +13,14 @@ import { EventPoster } from "./EventPoster";
 import { KeyPanel } from "./KeyPanel";
 import { KEY_PANEL_THRESHOLD } from "./keys-shared";
 import { MessageLoop } from "./MessageLoop";
+import { MobileBoard } from "./MobileBoard";
 import { PiketNow } from "./PiketNow";
 import { PiketPanel } from "./PiketPanel";
 import { SpecialOccasionBoard } from "./SpecialOccasionBoard";
 import { SubstitutionBoard } from "./SubstitutionBoard";
 import { useBlackout } from "./useBlackout";
 import { useIdlePointer } from "./useIdlePointer";
+import { useIsMobile } from "./useIsMobile";
 import { BUILD } from "@/lib/build";
 import type { BoardData, BoardMessage, SpecialOccasion } from "@/lib/types";
 
@@ -135,6 +137,7 @@ export function BoardShell({
   );
   const lastOkRef = useRef<number>(Date.now());
   const idle = useIdlePointer();
+  const isMobile = useIsMobile();
   const blackedOut = useBlackout(data.blackout);
   const [showing, setShowing] = useState<Interrupt | null>(null);
   // Bursts begun since the rotation was armed; -1 before the first one. Which
@@ -191,10 +194,11 @@ export function BoardShell({
   // A timeout per item rather than one interval, so stepping by hand restarts
   // the dwell instead of landing mid-way through somebody else's tick.
   useEffect(() => {
-    if (!permanentCycles || paused) return;
+    // The phone layout shows every item inline, so nothing cycles there.
+    if (isMobile || !permanentCycles || paused) return;
     const timer = setTimeout(() => setPermIndex((i) => i + 1), fullScreenMs);
     return () => clearTimeout(timer);
-  }, [permanentCycles, paused, permIndex, fullScreenMs]);
+  }, [isMobile, permanentCycles, paused, permIndex, fullScreenMs]);
 
   /*
    * One rotation drives every interruption. Two independent timers would
@@ -262,7 +266,7 @@ export function BoardShell({
    * would restart the phase on every poll and freeze the rotation.
    */
   useEffect(() => {
-    if (!queueKey || paused) return;
+    if (isMobile || !queueKey || paused) return;
     const due = queueKey.split(",") as Interrupt[];
     // The screen opens on the dashboard and waits a whole interval for its
     // first interruption; later dashboard spells are the rest of a turn.
@@ -279,7 +283,7 @@ export function BoardShell({
       setShowing(due[mod(next, due.length)]);
     }, delay);
     return () => clearTimeout(timer);
-  }, [queueKey, paused, showing, turn, burstMs, restMs, interruptEveryMs]);
+  }, [isMobile, queueKey, paused, showing, turn, burstMs, restMs, interruptEveryMs]);
 
   /*
    * Where the hairline's lap has to start for its line to reach turn `t`'s dot
@@ -526,6 +530,18 @@ export function BoardShell({
     stateKey(BUILD, initial.buildStampVisible),
     blackedOut || (showing === null && !paused),
   );
+
+  /*
+   * A phone gets its own layout: the whole board down one scrolling column, no
+   * rotation, no standby. It reuses everything above — the same poll, cache,
+   * staleness and self-reload — and only swaps what gets rendered, so a teacher
+   * reading from home stays on the same live data as the wall. Placed before
+   * the blackout branch on purpose: the night screen is for a dark corridor,
+   * not for someone who just opened the page.
+   */
+  if (isMobile) {
+    return <MobileBoard data={data} screenId={screenId} stale={stale} />;
+  }
 
   // Anything "Permanent" holds the whole screen for its window — it outranks
   // everything else, since it was set for exactly these days on purpose. A
