@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { programmeProgress } from "@/lib/programme";
 import { parseTimeOverride, schoolTime } from "@/lib/schedule";
 import type { SpecialOccasion, SpecialOccasionEntry } from "@/lib/types";
 import { Clock } from "./Clock";
@@ -25,10 +26,19 @@ function rowScale(rowCount: number, comfortable: number): number {
 // that cell as a pill rather than claiming a column that's mostly empty.
 const COLUMNS = "minmax(9.5rem, 13rem) 1fr minmax(7rem, 11rem)";
 
+/**
+ * The entry running right now, with a bar that fills as it runs — the twin of
+ * the substitution board's period marker.
+ *
+ * "Nu" carries the meaning; the entry's own start time rides along small and
+ * dimmed, because at eye level a bold "Nu · 9:30" reads as a claim about the
+ * clock rather than about the row.
+ */
 function NowTime({ timeFrom, progress }: { timeFrom: string; progress: number }) {
   return (
-    <span className="relative inline-flex min-w-[5em] flex-col items-center overflow-hidden rounded-sm bg-accent px-[0.3em] pb-[0.32em] pt-[0.14em] font-bold leading-none text-accent-contrast">
-      Nu · {timeFrom}
+    <span className="relative inline-flex min-w-[5em] items-baseline justify-center gap-[0.3em] overflow-hidden rounded-sm bg-accent px-[0.3em] pb-[0.32em] pt-[0.14em] font-bold leading-none text-accent-contrast">
+      Nu
+      <span className="text-[0.62em] font-normal opacity-70">{timeFrom}</span>
       <span className="absolute inset-x-[0.2em] bottom-[0.11em] h-[0.1em] rounded-full bg-black/25">
         <span
           className="block h-full rounded-full bg-white/90 transition-[width] duration-1000 ease-linear"
@@ -99,37 +109,22 @@ export function SpecialOccasionBoard({
    * carries the date at header size and shows the clock. */
   fullscreen?: boolean;
 }) {
-  const [nowIndex, setNowIndex] = useState(-1);
-  const [nowProgress, setNowProgress] = useState(0);
+  // Progress per entry, null where the entry isn't running. Empty until the
+  // first tick, so the server render and the first client render agree.
+  const [live, setLive] = useState<(number | null)[]>([]);
 
   useEffect(() => {
     // A schedule shown ahead of its day: no live row, just the plan.
     if (occasion.eventDate !== boardDate) {
-      setNowIndex(-1);
+      setLive([]);
       return;
     }
 
     const override = new URLSearchParams(window.location.search).get("now");
     const frozen = override ? parseTimeOverride(override) : null;
 
-    const tick = (minutesNow: number) => {
-      let found = -1;
-      let progress = 0;
-      for (let i = 0; i < occasion.entries.length; i++) {
-        const e = occasion.entries[i];
-        if (minutesNow < e.timeFromMinutes) continue;
-        if (e.timeToMinutes !== undefined && minutesNow >= e.timeToMinutes) continue;
-        found = i;
-        const duration =
-          e.timeToMinutes !== undefined
-            ? e.timeToMinutes - e.timeFromMinutes
-            : 0;
-        progress = duration > 0 ? (minutesNow - e.timeFromMinutes) / duration : 0;
-        break;
-      }
-      setNowIndex(found);
-      setNowProgress(progress);
-    };
+    const tick = (minutesNow: number) =>
+      setLive(programmeProgress(occasion.entries, minutesNow));
 
     if (frozen) {
       tick(frozen.minutes);
@@ -183,7 +178,8 @@ export function SpecialOccasionBoard({
             // divider between two rows must not throw off the alternating bg.
             let rowIndex = -1;
             return entries.map((entry, index) => {
-              const isNow = index === nowIndex;
+              const progress = live[index] ?? null;
+              const isNow = progress !== null;
               if (isPause(entry.activity)) {
                 return (
                   <PauzeDivider
@@ -204,10 +200,7 @@ export function SpecialOccasionBoard({
               >
                 <span className="font-display text-[1.5em] font-bold leading-none text-accent">
                   {isNow ? (
-                    <NowTime
-                      timeFrom={entry.timeFrom}
-                      progress={nowProgress}
-                    />
+                    <NowTime timeFrom={entry.timeFrom} progress={progress} />
                   ) : (
                     <>
                       {entry.timeFrom}
